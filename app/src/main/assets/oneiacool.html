@@ -331,6 +331,19 @@
             letter-spacing: 1px;
         }
 
+        #keyToggle {
+            position: fixed; top: 8px; right: 8px; z-index: 9999;
+            background: rgba(0, 20, 50, 0.85); color: var(--primary-glow);
+            border: 1px solid var(--secondary-glow); border-radius: 20px;
+            padding: 6px 12px; font-family: inherit; font-size: 0.75rem; cursor: pointer;
+        }
+        #keyInfo { font-size: 0.68rem; color: #8892b0; line-height: 1.3; }
+        #keyDeleteBtn {
+            display: none; background: transparent; color: var(--error-glow);
+            border: 1px solid var(--error-glow); border-radius: 6px;
+            padding: 8px 10px; font-family: inherit; font-size: 0.75rem; cursor: pointer;
+        }
+
         input[type="password"] {
             background: rgba(0, 243, 255, 0.05);
             border: 1px solid var(--secondary-glow);
@@ -923,9 +936,12 @@
 
     <div id="status">Sistemas en espera. Introduce tu API Key de Groq y haz clic en Iniciar.</div>
 
+    <button id="keyToggle" onclick="alternarPanelClave()" title="Administrar tu API Key de Groq">🔑 API Key</button>
     <div class="config-panel" id="configPanel">
-        <label for="apiKeyInput">Ingresa tu llave por favor</label>
-        <input type="password" id="apiKeyInput" placeholder="Pega tu gsk_ aquí..." value="">
+        <label for="apiKeyInput">API Key de Groq (se guarda una sola vez en este dispositivo)</label>
+        <input type="password" id="apiKeyInput" placeholder="Pega tu gsk_ aquí..." value="" autocomplete="off">
+        <div id="keyInfo"></div>
+        <button id="keyDeleteBtn" onclick="eliminarGroqKey()">🗑️ Eliminar API Key de Groq</button>
     </div>
 
     <button id="startButton" onclick="activarJarvis()">INICIAR SISTEMA</button>
@@ -1111,6 +1127,69 @@
         let recognition = null;
         let reconocimientoEnMarcha = false; // evita starts duplicados que disparan el permiso otra vez
         let groqApiKey = "";
+
+        // ---- API Key de Groq: se guarda una sola vez en este dispositivo ----
+        const GROQ_KEY_STORAGE = 'oneia_groq_key';
+        let keyBorrarConfirmando = false;
+        function groqKeyGuardada() { try { return localStorage.getItem(GROQ_KEY_STORAGE) || ''; } catch (e) { return ''; } }
+        function guardarGroqKey(k) { try { localStorage.setItem(GROQ_KEY_STORAGE, k); } catch (e) {} }
+        function actualizarEstadoClave() {
+            const guardada = !!groqKeyGuardada();
+            const info = document.getElementById('keyInfo');
+            const btn = document.getElementById('keyDeleteBtn');
+            if (info) info.textContent = guardada
+                ? '✓ Clave guardada en este dispositivo. No tendrás que volver a pegarla.'
+                : 'Pega tu clave una sola vez; se guardará en este dispositivo.';
+            if (btn) { btn.style.display = guardada ? 'block' : 'none'; btn.textContent = '🗑️ Eliminar API Key de Groq'; }
+            keyBorrarConfirmando = false;
+        }
+        function restaurarGroqKey() {
+            const k = groqKeyGuardada();
+            if (k && k.startsWith('gsk_')) {
+                apiKeyInput.value = k;
+                groqApiKey = k;
+                if (!sistemaActivo) {
+                    configPanel.style.display = 'none';
+                    setStatus('Clave de Groq guardada. Pulsa INICIAR SISTEMA o escríbeme.');
+                }
+            }
+            actualizarEstadoClave();
+        }
+        function alternarPanelClave() {
+            configPanel.style.display = (getComputedStyle(configPanel).display === 'none') ? 'flex' : 'none';
+            actualizarEstadoClave();
+        }
+        // No usa confirm() porque el WebView de Android lo cancela: se pide tocar dos veces.
+        function eliminarGroqKey() {
+            const btn = document.getElementById('keyDeleteBtn');
+            if (!keyBorrarConfirmando) {
+                keyBorrarConfirmando = true;
+                btn.textContent = '¿Seguro? Toca de nuevo para eliminarla';
+                setTimeout(() => { keyBorrarConfirmando = false; btn.textContent = '🗑️ Eliminar API Key de Groq'; }, 4000);
+                return;
+            }
+            if (sistemaActivo) detenerJarvis();
+            try { localStorage.removeItem(GROQ_KEY_STORAGE); } catch (e) {}
+            apiKeyInput.value = '';
+            groqApiKey = '';
+            configPanel.style.display = 'flex';
+            actualizarEstadoClave();
+            setStatus('API Key de Groq eliminada de este dispositivo.');
+        }
+        // Si Groq rechaza la clave (401) se borra la guardada para pedir una nueva.
+        function olvidarGroqKeyInvalida() {
+            try { localStorage.removeItem(GROQ_KEY_STORAGE); } catch (e) {}
+            apiKeyInput.value = '';
+            groqApiKey = '';
+            configPanel.style.display = 'flex';
+            actualizarEstadoClave();
+        }
+        apiKeyInput.addEventListener('input', () => {
+            const v = apiKeyInput.value.trim();
+            if (v.startsWith('gsk_') && v.length >= 20) { guardarGroqKey(v); groqApiKey = v; }
+            actualizarEstadoClave();
+        });
+        window.addEventListener('load', restaurarGroqKey);
 
         // --- Acumulador para que no te corte a medio hablar ---
         // El reconocimiento de voz del navegador (sobre todo en celular) marca
@@ -1707,7 +1786,7 @@
         // ======================================================================
         // ======= CLAVE DE LA API KEY DE CLAUDE (Anthropic, empieza con sk-ant-)
         // Consíguela en https://console.anthropic.com/settings/keys
-        const CLAUDE_API_KEY = "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";
+        const CLAUDE_API_KEY = "";
         // ======================================================================
 
         // ██████████████████████████████████████████████████████████████████
@@ -1717,7 +1796,7 @@
         // ██   Consíguela/cámbiala en https://aistudio.google.com/apikey   ██
         // ██                                                                ██
         // ██████████████████████████████████████████████████████████████████
-        const NANO_BANANA_API_KEY = "AQ.Ab8RN6KAeRC6gqHQMwwKD9vx-tHviJOKjxiZm58e0dNBLYnmzg";
+        const NANO_BANANA_API_KEY = "";
         // ██████████████████████████████████████████████████████████████████
         // ██                                                                ██
         // ██   CLAVE DE POLLINATIONS (respaldo gratis de imágenes)          ██
@@ -1753,7 +1832,7 @@
         // ██   PÉGALA AQUÍ ABAJO, ENTRE COMILLAS                            ██
         // ██                                                                ██
         // ██████████████████████████████████████████████████████████████████
-        const HUGGINGFACE_API_KEY = "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";
+        const HUGGINGFACE_API_KEY = "";
         // ██████████████████████████████████████████████████████████████████
         // ⚠️ ACTUALIZACIÓN: desde mediados de 2025 Hugging Face sacó los
         // modelos de generación de imágenes de su nivel gratuito serverless
@@ -2260,14 +2339,30 @@
         }
 
         function detectarLlamarWhatsapp(texto) {
-            const normal = normalizarTexto(texto);
-            if (!/whatsapp|wasap/.test(normal)) return null;
-            const esLlamadaOMensaje = /\b(llama|llamale|llamame|marca|marcale|escribe|escribele|manda|mandale|envia|enviale)\b/.test(normal);
-            if (!esLlamadaOMensaje) return null;
+            const normal = quitarMuletillasInicio(normalizarTexto(texto));
+            const WA = '(?:whats\\s?app|wasap|guasap|wats\\s?app)';
+            if (!new RegExp('\\b' + WA + '\\b').test(normal)) return null;
+            const hayMensaje = /\b(escribe|escribele|escribeme|manda|mandale|mandame|mandar|envia|enviale|enviame|enviar|mensaje|mensajes|mensajea|dile|dale|saluda)\b/.test(normal);
+            let esLlamada = /\b(llama|llamale|llamame|marca|marcale|llamada|videollamada)\b/.test(normal);
+            if (!esLlamada && !hayMensaje) return null;
+            if (/\bmensaje/.test(normal)) esLlamada = false;
 
-            let match = normal.match(/\b(?:llama|llamale|llamame|marca|marcale|escribe|escribele|manda|mandale|envia|enviale)\s+(?:a\s+|le\s+a\s+)?(.+?)\s+(?:por|via|en)\s+whatsapp/);
-            const nombreDicho = match ? match[1].trim() : null;
-            return { nombreDicho, esLlamada: /\b(llama|llamale|llamame|marca|marcale)\b/.test(normal) };
+            // Texto del mensaje (se toma del original para conservar mayusculas y acentos)
+            let mensaje = '';
+            const mm = texto.match(/(?:\bdiciendo\b|\by\s+(?:le\s+)?dile\s+que\b|\bdile\s+que\b|\bque\s+(?:le\s+)?diga\b|\bcon\s+el\s+(?:mensaje|texto)\b|\bque\b|:)\s*[:,]?\s*(.+)$/i);
+            if (mm) mensaje = mm[1].trim().replace(/^["“”']+|["“”']+$/g, '');
+            const parteNombre = mm ? normalizarTexto(texto.slice(0, mm.index)) : normal;
+
+            let t = quitarMuletillasInicio(parteNombre)
+                .replace(new RegExp('\\b(?:por|via|en|de|desde|con|usando)\\s+(?:el\\s+|mi\\s+)?' + WA + '\\b', 'g'), ' ')
+                .replace(new RegExp('\\b' + WA + '\\b', 'g'), ' ')
+                .replace(/\bmensaje(?:s|ito)?\b/g, ' ')
+                .replace(/\b(?:un|una)\b/g, ' ')
+                .replace(/\s+/g, ' ').trim();
+            const m = t.match(/\b(?:a|al|para|con)\s+(?:(?:el|la)\s+)?(?:contacto\s+)?(.+)$/);
+            let nombre = m ? m[1] : t.replace(/^(?:llama|llamale|llamame|marca|marcale|escribe|escribele|escribeme|manda|mandale|mandame|mandar|envia|enviale|enviame|enviar|mensajea|dile|dale|saluda|hazle|hazme|realiza|llamada|videollamada)\s*/g, '');
+            nombre = (nombre || '').replace(/[.,;:!?]+$/g, '').trim();
+            return { nombreDicho: nombre || null, esLlamada, mensaje };
         }
 
         function detectarActivarAlarma(texto) {
@@ -3307,56 +3402,58 @@
             setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
         }
 
-        async function llamarPorWhatsappAccion(nombreDicho, esLlamada) {
-            await cargarContactosGuardados();
-
-            if (!Object.keys(contactosWhatsapp).length) {
-                const mensaje = 'Todavía no tienes contactos guardados. Dime "agrega el contacto de [nombre] con el número [número]" y lo recuerdo para la próxima.';
-                agregarMensajeChat('assistant', mensaje);
-                await hablar(mensaje);
+        async function llamarPorWhatsappAccion(nombreDicho, esLlamada, mensajeTexto = '') {
+            const responder = async (msg) => {
+                agregarMensajeChat('assistant', msg);
+                await hablar(msg);
                 estadoEscucha = 'DORMIDO';
                 setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+            };
+            if (!nombreDicho) {
+                await responder('No entendí a quién quieres escribirle. Di, por ejemplo: "mándale un mensaje de WhatsApp a Juan diciendo hola".');
                 return;
             }
 
-            const claveContacto = nombreDicho ? encontrarContactoParecido(nombreDicho) : null;
-            if (!claveContacto) {
-                const mensaje = `No tengo guardado un contacto llamado "${nombreDicho || ''}". Dime "agrega el contacto de [nombre] con el número [número]" primero.`;
-                agregarMensajeChat('assistant', mensaje);
-                await hablar(mensaje);
-                estadoEscucha = 'DORMIDO';
-                setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+            let numero = '', nombreFinal = nombreDicho;
+            // 1) Contactos reales del teléfono (dentro de la app Android)
+            if (window.OneiaNativo && OneiaNativo.contactoWhatsapp) {
+                const r = OneiaNativo.contactoWhatsapp(nombreDicho);
+                if (r === 'permiso') {
+                    await responder('Necesito permiso para leer tus contactos. Acéptalo y repite el comando.');
+                    return;
+                }
+                if (r) { try { const o = JSON.parse(r); numero = o.numero; nombreFinal = o.nombre; } catch (e) {} }
+            }
+            // 2) Contactos guardados a mano ("agrega el contacto de ...")
+            if (!numero) {
+                await cargarContactosGuardados();
+                const clave = encontrarContactoParecido(nombreDicho);
+                if (clave) { numero = String(contactosWhatsapp[clave]).replace(/[^\d]/g, ''); nombreFinal = clave; }
+            }
+            if (!numero) {
+                await responder(`No encontré a "${nombreDicho}" en tus contactos. Revisa cómo lo tienes guardado, o dime "agrega el contacto de ${nombreDicho} con el número ..." y lo recuerdo.`);
                 return;
             }
 
-            const numero = contactosWhatsapp[claveContacto];
-            const url = `https://wa.me/${numero}`;
-            setStatus(`Abriendo WhatsApp con ${claveContacto}...`);
-
+            const url = `https://wa.me/${numero}` + (mensajeTexto ? `?text=${encodeURIComponent(mensajeTexto)}` : '');
+            setStatus(`Abriendo WhatsApp con ${nombreFinal}...`);
             openAppBtn.href = url;
             openAppBtn.innerText = `Abrir chat de WhatsApp →`;
             openAppBtn.style.display = 'inline-block';
 
             let abierto = false;
-            try {
-                const nuevaVentana = window.open(url, '_blank');
-                abierto = !!(nuevaVentana && !nuevaVentana.closed);
-            } catch (e) {
-                abierto = false;
+            if (window.OneiaNativo && OneiaNativo.abrirWhatsapp) {
+                abierto = OneiaNativo.abrirWhatsapp(numero, mensajeTexto || '') === 'ok';
+            } else {
+                try { const w = window.open(url, '_blank'); abierto = !!(w && !w.closed); } catch (e) { abierto = false; }
             }
 
-            const explicacion = esLlamada
-                ? `Te dejé el chat de ${claveContacto} abierto en WhatsApp; por seguridad del navegador, el toque final en el ícono de llamada tienes que darlo tú.`
-                : `Te dejé el chat de ${claveContacto} abierto en WhatsApp, listo para que escribas y envíes tu mensaje.`;
-
-            agregarMensajeChat('assistant', explicacion);
-            if (!abierto) {
-                fileStatus.innerHTML = `El navegador bloqueó la apertura automática. Usa el botón "Abrir chat de WhatsApp" que aparece debajo del panel de adjuntos.`;
-            }
-            await hablar(explicacion);
-
-            estadoEscucha = 'DORMIDO';
-            setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+            let explicacion;
+            if (!abierto) explicacion = `No pude abrir WhatsApp automáticamente. Toca el botón "Abrir chat de WhatsApp" para hablar con ${nombreFinal}.`;
+            else if (esLlamada) explicacion = `Abrí el chat de ${nombreFinal} en WhatsApp. Toca el ícono de llamada para llamarle: WhatsApp no permite iniciarla solo.`;
+            else if (mensajeTexto) explicacion = `Abrí el chat de ${nombreFinal} con tu mensaje escrito. Solo toca enviar: WhatsApp no deja que otra app lo mande sola.`;
+            else explicacion = `Abrí el chat de ${nombreFinal} en WhatsApp, listo para que escribas tu mensaje.`;
+            await responder(explicacion);
         }
 
         async function explicarLimitacionAlarma() {
@@ -6725,7 +6822,8 @@ while True:
                         });
 
                         if (response.status === 401) {
-                            return { error: "La clave de API de Groq no es válida o ha expirado." };
+                            olvidarGroqKeyInvalida();
+                            return { error: "La clave de API de Groq no es válida o ha expirado. La borré: pega una nueva en 🔑 API Key." };
                         }
                         if (!response.ok) {
                             let detalle = `código ${response.status}`;
@@ -6882,7 +6980,7 @@ while True:
 
             const llamadaWhatsapp = detectarLlamarWhatsapp(comando);
             if (llamadaWhatsapp) {
-                await llamarPorWhatsappAccion(llamadaWhatsapp.nombreDicho, llamadaWhatsapp.esLlamada);
+                await llamarPorWhatsappAccion(llamadaWhatsapp.nombreDicho, llamadaWhatsapp.esLlamada, llamadaWhatsapp.mensaje);
                 return;
             }
 
@@ -7284,6 +7382,7 @@ while True:
             }
 
             if (!response.ok) {
+                if (response.status === 401) olvidarGroqKeyInvalida();
                 let detalle = `código ${response.status}`;
                 try {
                     const errBody = await response.json();

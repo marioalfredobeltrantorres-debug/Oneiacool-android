@@ -12,6 +12,8 @@ import android.os.Bundle
 import android.os.Message
 import android.provider.ContactsContract
 import android.provider.MediaStore
+import android.telephony.PhoneNumberUtils
+import android.telephony.TelephonyManager
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -26,6 +28,8 @@ import java.text.Normalizer
 class MainActivity : Activity() {
     private lateinit var web: WebView
     private var reconocedor: SpeechRecognizer? = null
+    private var permisoPendiente: PermissionRequest? = null
+    private var selectorArchivos: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(b: Bundle?) {
         super.onCreate(b)
@@ -55,7 +59,30 @@ class MainActivity : Activity() {
             }
         }
         web.webChromeClient = object : WebChromeClient() {
-            override fun onPermissionRequest(request: PermissionRequest) { request.grant(request.resources) }
+            override fun onPermissionRequest(request: PermissionRequest) {
+                runOnUiThread {
+                    val faltan = mutableListOf<String>()
+                    if (request.resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE) &&
+                        checkSelfPermission(CAMERA) != PackageManager.PERMISSION_GRANTED) faltan.add(CAMERA)
+                    if (request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE) &&
+                        checkSelfPermission(RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) faltan.add(RECORD_AUDIO)
+                    if (faltan.isEmpty()) request.grant(request.resources)
+                    else { permisoPendiente = request; requestPermissions(faltan.toTypedArray(), 3) }
+                }
+            }
+            // Botones de adjuntar (Imagen / Documento / Foto): sin esto no abren nada en el WebView
+            override fun onShowFileChooser(view: WebView, cb: ValueCallback<Array<Uri>>, p: FileChooserParams): Boolean {
+                selectorArchivos?.onReceiveValue(null)
+                if (p.isCaptureEnabled) {
+                    // "Foto": se usa la cámara integrada de la página
+                    cb.onReceiveValue(null); selectorArchivos = null
+                    js("abrirCamaraAdjunto()")
+                    return true
+                }
+                selectorArchivos = cb
+                return try { startActivityForResult(p.createIntent(), 10); true }
+                catch (e: Exception) { selectorArchivos = null; cb.onReceiveValue(null); false }
+            }
             override fun onGeolocationPermissionsShowPrompt(origin: String, cb: GeolocationPermissions.Callback) {
                 cb.invoke(origin, true, false)
             }
@@ -79,6 +106,24 @@ class MainActivity : Activity() {
                 "r.readAsDataURL(b);}catch(e){}})()")
         }
         web.loadUrl("https://appassets.androidplatform.net/assets/oneiacool.html")
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 3) {
+            val req = permisoPendiente; permisoPendiente = null
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) req?.grant(req.resources)
+            else req?.deny()
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 10) {
+            selectorArchivos?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
+            selectorArchivos = null
+        }
     }
 
     private fun js(code: String) = runOnUiThread { web.evaluateJavascript(code, null) }
@@ -129,6 +174,31 @@ class MainActivity : Activity() {
 
     override fun onDestroy() { reconocedor?.destroy(); web.destroy(); super.onDestroy() }
 
+    private fun contactoPorNombre(nombre: String): Pair<String, String>? {
+        if (checkSelfPermission(READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return null
+        val n = sinAcentos(nombre).trim()
+        if (n.isEmpty()) return null
+        var mejor: Pair<String, String>? = null
+        var puntos = 0
+        val cur = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)
+        cur?.use {
+            while (it.moveToNext()) {
+                val nom = it.getString(0) ?: continue
+                val num = it.getString(1) ?: continue
+                val sn = sinAcentos(nom)
+                val p = when {
+                    sn == n -> 3
+                    sn.startsWith(n) || sn.split(" ").contains(n) -> 2
+                    sn.contains(n) -> 1
+                    else -> 0
+                }
+                if (p > puntos) { puntos = p; mejor = Pair(nom, num) }
+            }
+        }
+        return mejor
+    }
+
     // Funciones que ONEIACOOL (la página) puede llamar directamente: window.OneiaNativo.xxx()
     inner class Puente {
         @JavascriptInterface fun abrirApp(pkg: String): Boolean {
@@ -148,12 +218,39 @@ class MainActivity : Activity() {
             } catch (e: Exception) { "error" }
         }
         @JavascriptInterface fun buscarContacto(nombre: String): String {
-            if (checkSelfPermission(READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return ""
-            val n = sinAcentos(nombre)
-            val cur = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, null)
-            cur?.use { while (it.moveToNext()) if (sinAcentos(it.getString(0) ?: "").contains(n)) return (it.getString(1) ?: "").replace(Regex("[^\\d+]"), "") }
-            return ""
+            val c = contactoPorNombre(nombre) ?: return ""
+            return c.second.replace(Regex("[^\\d+]"), "")
+        }
+        // Devuelve {"nombre":..., "numero":...} con el numero en formato internacional (solo digitos),
+        // "" si no existe el contacto o "permiso" si falta el permiso de contactos.
+        @JavascriptInterface fun contactoWhatsapp(nombre: String): String {
+            if (checkSelfPermission(READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+                runOnUiThread { requestPermissions(arrayOf(READ_CONTACTS), 4) }; return "permiso"
+            }
+            val c = contactoPorNombre(nombre) ?: return ""
+            val raw = c.second.replace(Regex("[^\\d+]"), "")
+            val tm = getSystemService(TelephonyManager::class.java)
+            val iso = (tm?.simCountryIso?.takeIf { it.isNotBlank() }
+                ?: tm?.networkCountryIso?.takeIf { it.isNotBlank() }
+                ?: java.util.Locale.getDefault().country).uppercase()
+            val e164 = try { PhoneNumberUtils.formatNumberToE164(raw, iso) } catch (e: Exception) { null }
+            var digitos = (e164 ?: raw).replace(Regex("[^\\d]"), "")
+            if (e164 == null && raw.startsWith("00")) digitos = raw.substring(2)
+            return JSONObject().put("nombre", c.first).put("numero", digitos).toString()
+        }
+        // Abre el chat de WhatsApp (o WhatsApp Business) con el texto ya escrito. No lo envia: lo toca el usuario.
+        @JavascriptInterface fun abrirWhatsapp(num: String, texto: String): String {
+            val digitos = num.replace(Regex("[^\\d]"), "")
+            if (digitos.isEmpty()) return "error"
+            val uri = Uri.parse("https://wa.me/" + digitos + (if (texto.isNotBlank()) "?text=" + Uri.encode(texto) else ""))
+            for (pkg in listOf("com.whatsapp", "com.whatsapp.w4b", null)) {
+                try {
+                    val i = Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    if (pkg != null) i.setPackage(pkg)
+                    startActivity(i); return "ok"
+                } catch (e: Exception) {}
+            }
+            return "error"
         }
         @JavascriptInterface fun linterna(on: Boolean): Boolean = try {
             val cm = getSystemService(CameraManager::class.java)
