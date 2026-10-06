@@ -359,6 +359,37 @@
             border-color: var(--primary-glow);
         }
 
+        #moreKeysToggle {
+            background: transparent; color: var(--primary-glow);
+            border: 1px dashed var(--secondary-glow); border-radius: 6px;
+            padding: 8px 10px; font-family: inherit; font-size: 0.75rem; cursor: pointer; margin-top: 4px;
+        }
+        #moreKeys { display: none; flex-direction: column; gap: 8px; max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+        .kcard {
+            border: 1px solid var(--secondary-glow); border-radius: 8px; padding: 8px;
+            background: rgba(0, 20, 50, 0.55); display: flex; flex-direction: column; gap: 5px; text-align: left;
+        }
+        .kcard .ktitulo { font-size: 0.8rem; color: var(--primary-glow); font-weight: bold; }
+        .kcard .kuso { font-size: 0.66rem; color: #8892b0; line-height: 1.3; }
+        .kcard .kuso a { color: var(--primary-glow); }
+        .kcard input {
+            background: rgba(0, 243, 255, 0.05); border: 1px solid var(--secondary-glow); color: #fff;
+            padding: 7px 9px; width: 100%; border-radius: 5px; outline: none; font-family: inherit; font-size: 0.82rem;
+        }
+        .kcard input:focus { border-color: var(--primary-glow); }
+        .kcard .kestado { font-size: 0.68rem; color: #8892b0; }
+        .kcard .kestado.ok { color: #6dff9c; }
+        .kcard .kfila { display: flex; gap: 6px; }
+        .kcard .kfila button {
+            flex: 1; background: transparent; border-radius: 6px; padding: 7px 8px;
+            font-family: inherit; font-size: 0.72rem; cursor: pointer;
+        }
+        .kcard .kguardar { color: var(--primary-glow); border: 1px solid var(--primary-glow); }
+        .kcard .keliminar { color: var(--error-glow); border: 1px solid var(--error-glow); }
+        .kcard .kmsg { font-size: 0.68rem; min-height: 0.9em; }
+        .kcard .kmsg.err { color: var(--error-glow); }
+        .kcard .kmsg.ok { color: #6dff9c; }
+
         #startButton {
             margin-top: 15px;
             padding: 12px 30px;
@@ -561,7 +592,7 @@
         }
         #mediaResult iframe {
             width: 100%;
-            height: 420px;
+            height: min(640px, 78vh);
             border: 1px solid var(--secondary-glow);
             border-radius: 8px;
             background: #fff;
@@ -904,6 +935,268 @@
     </style>
 </head>
 <body>
+
+<!-- ======================= INTRO (se muestra CADA vez que el usuario entra) =======================
+     Arranca sola. Un clic en cualquier parte de la pantalla la salta. Al terminar se funde a negro y aparece la IA. -->
+<script>
+(function(){
+  var CLAVE='oneia_intro_vista_v1';
+  function yaVista(){ try{ if(localStorage.getItem(CLAVE)) return true; }catch(e){} return document.cookie.indexOf(CLAVE+'=1')>-1; }
+  function marcarVista(){ try{ localStorage.setItem(CLAVE,'1'); }catch(e){} try{ document.cookie=CLAVE+'=1; max-age=315360000; path=/; SameSite=Lax'; }catch(e){} }
+  // La intro se muestra SIEMPRE que el usuario entra (ya no se recuerda si fue vista).
+
+  var prevOverflow=document.documentElement.style.overflow;
+  document.documentElement.style.overflow='hidden';
+  var st=document.createElement('style'); st.id='introStyle'; st.textContent="#introOverlay{position:fixed;inset:0;z-index:2147483000;background:#000;overflow:hidden;font-family:\"Courier New\",monospace;transition:opacity .9s ease}\n#introOverlay canvas{display:block}\n#introOverlay #intro_stage{position:fixed;inset:0;transform-origin:50% 50%}\n#introOverlay #intro_title{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;color:#00f0ff;font-weight:700;letter-spacing:.38em;padding-left:.38em;font-size:clamp(28px,7.5vw,96px);text-shadow:0 0 18px #00e5ff,0 0 50px #0090ff;opacity:0;pointer-events:none}\n#introOverlay #intro_sub{position:absolute;left:0;right:0;top:calc(50% + clamp(36px,6.5vw,80px));text-align:center;color:#7fdcff;letter-spacing:.3em;font-size:clamp(11px,1.6vw,18px);opacity:0;pointer-events:none}\n#introOverlay #intro_flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none}\n#introOverlay #intro_noise,#introOverlay #intro_scan{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:0}\n#introOverlay #intro_scan{background:repeating-linear-gradient(0deg,rgba(0,0,0,.35) 0 2px,transparent 2px 4px)}\n#introOverlay #intro_ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:7vh;pointer-events:none}\n#introOverlay button{pointer-events:auto;cursor:pointer;border:0;border-radius:40px;padding:16px 38px;font:700 18px \"Courier New\",monospace;background:#00f0ff;color:#001018;box-shadow:0 0 30px #00f0ff88;transition:transform .15s,box-shadow .15s}\n#introOverlay button:hover{transform:scale(1.05);box-shadow:0 0 50px #00f0ffcc}\n#introOverlay button.ghost{background:transparent;color:#00f0ff;border:1px solid #00f0ff66;box-shadow:none;padding:10px 22px;font-size:14px;margin-top:12px}\n#introOverlay #intro_hint{color:#7fdcff;font-size:14px;margin-bottom:14px;letter-spacing:.15em}"; document.head.appendChild(st);
+  var ov=document.createElement('div'); ov.id='introOverlay'; ov.innerHTML="<div id=\"intro_stage\"><div id=\"intro_title\">ONEIACOOL</div><div id=\"intro_sub\"></div></div>\n<canvas id=\"intro_noise\" width=\"96\" height=\"54\"></canvas><div id=\"intro_scan\"></div><div id=\"intro_flash\"></div>\n<div id=\"intro_ui\"><div id=\"intro_hint\">Toca la pantalla para saltar</div></div>"; document.body.appendChild(ov);
+
+  function abortar(){            // sin WebGL o sin internet para three.js: se omite la intro y NO se marca como vista
+    var o=document.getElementById('introOverlay'); if(o) o.remove();
+    var s=document.getElementById('introStyle'); if(s) s.remove();
+    document.documentElement.style.overflow=prevOverflow;
+  }
+  function iniciar(){
+    var R=Math.random, V3=function(x,y,z){return new THREE.Vector3(x,y,z)}, cl=function(v,a,b){a=a===undefined?0:a;b=b===undefined?1:b;return Math.min(b,Math.max(a,v))}, $=function(id){return document.getElementById('intro_'+id)};
+    var ease=function(x){return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2};
+    /* Línea de tiempo (segundos) */
+    const T_IMPACT=6, T_TITLE=9.3, T_FLICK=12, T_OFF=13.6, T_ON=15, T_END=16.3;
+    const F1=[[12,.06],[12.18,.04],[12.3,.1],[12.62,.05],[12.8,.18],[13.1,.05],[13.2,.05],[13.34,.12]];
+    const F2=[[15.55,.05],[15.7,.04],[15.85,.07]];
+
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.1,400);
+    let renderer;
+    try { renderer=new THREE.WebGLRenderer({antialias:true}); } catch(e) { return false; }   // sin WebGL: se omite la intro
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setSize(innerWidth,innerHeight); $('stage').prepend(renderer.domElement);
+
+    /* Textura de brillo suave */
+    const fc=document.createElement('canvas'); fc.width=fc.height=64; const fx=fc.getContext('2d'), g0=fx.createRadialGradient(32,32,0,32,32,32);
+    g0.addColorStop(0,'rgba(255,255,255,1)'); g0.addColorStop(.25,'rgba(200,240,255,.85)'); g0.addColorStop(.6,'rgba(100,180,255,.35)'); g0.addColorStop(1,'rgba(0,60,255,0)');
+    fx.fillStyle=g0; fx.fillRect(0,0,64,64); const fTex=new THREE.CanvasTexture(fc);
+    const ADD={map:fTex,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false};
+    const sprite=(color,op=1)=>new THREE.Sprite(new THREE.SpriteMaterial({...ADD,color,opacity:op}));
+
+    /* Estrellas */
+    { const n=3500,p=new Float32Array(n*3); for(let i=0;i<n;i++){ const v=V3(R()-.5,R()-.5,R()-.5).normalize().multiplyScalar(120+R()*60); p.set([v.x,v.y,v.z],i*3); }
+      const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+      scene.add(new THREE.Points(g,new THREE.PointsMaterial({...ADD,size:1.6,sizeAttenuation:false,color:0xcfe8ff}))); }
+
+    /* Galaxia espiral */
+    const gal=new THREE.Group(), gp=new THREE.Group(); gal.add(gp); gal.position.set(0,-3,-24); gal.rotation.set(1.05,0,.25); scene.add(gal);
+    let galMat;
+    { const N=32000,Rg=36,pos=new Float32Array(N*3),col=new Float32Array(N*3),c1=new THREE.Color(0xbff8ff),c2=new THREE.Color(0x6a3cff),c3=new THREE.Color(0xff4fd8),c=new THREE.Color();
+      for(let i=0;i<N;i++){ let x,y,z,t;
+        if(i<N*.18){ const r=Math.pow(R(),2)*5,a=R()*6.283,b=Math.acos(2*R()-1); x=r*Math.sin(b)*Math.cos(a); z=r*Math.sin(b)*Math.sin(a); y=r*Math.cos(b)*.5; t=r/Rg; }
+        else { const arm=i%4,r=Math.pow(R(),1.4)*Rg,a=arm*Math.PI/2+r*.22+(R()-.5)*(.3+r*.015),s=.4+r*.1;
+          x=Math.cos(a)*r+(R()-.5)*s; z=Math.sin(a)*r+(R()-.5)*s; y=(R()-.5)*(2*Math.exp(-r/8)+.3); t=r/Rg; }
+        pos.set([x,y,z],i*3); c.copy(c1).lerp(R()<.18?c3:c2,Math.min(1,t*1.3)).multiplyScalar(1-.45*t); col.set([c.r,c.g,c.b],i*3); }
+      const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(pos,3)); g.setAttribute('color',new THREE.BufferAttribute(col,3));
+      galMat=new THREE.PointsMaterial({...ADD,size:.28,vertexColors:true,opacity:.9}); gp.add(new THREE.Points(g,galMat)); }
+    const core=sprite(0xaaf0ff,.7); core.scale.setScalar(18); gal.add(core);
+
+    /* Luces */
+    scene.add(new THREE.AmbientLight(0x334466,.7));
+    const sun=new THREE.DirectionalLight(0xffffff,1.3); sun.position.set(5,5,9); scene.add(sun);
+    const rimL=new THREE.PointLight(0x40e0ff,2,40); rimL.position.set(0,0,8); scene.add(rimL);
+    const boomLight=new THREE.PointLight(0xff9040,0,80); scene.add(boomLight);
+
+    /* Esferas JARVIS */
+    const deg=Math.PI/180, COL=[0x1e90ff,0x00b3ff,0x3d7bff];
+    const SIS={1:[[210,70,0,4.5,1,2,.55,0],[190,70,60,6.5,-1,1,.5,0],[232,70,120,8,1,1,.36,1]],
+               2:[[170,78,30,3.6,-1,2,.55,0],[250,65,90,11,1,1,.3,1],[150,60,150,5,1,1,.45,0]],
+               3:[[196,84,45,3,1,2,.48,0],[128,72,100,2.4,-1,1,.55,0],[270,75,15,14,-1,1,.26,1]]};
+    const AXS={1:[V3(.35,1,.1).normalize(),26,1],2:[V3(1,.25,.4).normalize(),34,-1],3:[V3(.2,.3,1).normalize(),19,1]};
+    const cvs=(n,f)=>{ const c=document.createElement('canvas'); c.width=c.height=n; f(c.getContext('2d')); return new THREE.CanvasTexture(c); };
+    const shellTex=cvs(512,x=>{ const g=x.createRadialGradient(256,256,120,256,256,256); g.addColorStop(0,'rgba(0,102,255,.55)'); g.addColorStop(.35,'rgba(0,102,255,.18)'); g.addColorStop(1,'rgba(0,102,255,0)');
+      x.fillStyle=g; x.fillRect(0,0,512,512); x.fillStyle='rgba(2,10,40,.78)'; x.beginPath(); x.arc(256,256,128,0,6.283); x.fill();
+      x.lineWidth=7; x.strokeStyle='#0066ff'; x.shadowColor='#0066ff'; x.shadowBlur=22; x.beginPath(); x.arc(256,256,126,0,6.283); x.stroke(); });
+    const dashTex=cvs(512,x=>{ x.setLineDash([16,12]); x.lineWidth=4.5; x.strokeStyle='#00f3ff'; x.shadowColor='#00f3ff'; x.shadowBlur=14; x.beginPath(); x.arc(256,256,99,0,6.283); x.stroke(); });
+    const coreTex=cvs(256,x=>{ const h=x.createRadialGradient(128,128,40,128,128,128); h.addColorStop(0,'rgba(0,243,255,.7)'); h.addColorStop(1,'rgba(0,243,255,0)'); x.fillStyle=h; x.fillRect(0,0,256,256);
+      const g=x.createRadialGradient(128,128,0,128,128,58); g.addColorStop(0,'#00f3ff'); g.addColorStop(1,'#0066ff'); x.fillStyle=g; x.beginPath(); x.arc(128,128,58,0,6.283); x.fill(); });
+    const elecTex=cvs(64,x=>{ const g=x.createRadialGradient(32,32,0,32,32,32); g.addColorStop(0,'#ffffff'); g.addColorStop(.25,'#cfeaff'); g.addColorStop(.5,'rgba(120,170,255,.6)'); g.addColorStop(1,'rgba(0,80,255,0)'); x.fillStyle=g; x.fillRect(0,0,64,64); });
+    function makeOrb(S){
+      const g=new THREE.Group(), mk=t=>new THREE.Mesh(new THREE.PlaneGeometry(4*S,4*S),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+      const shell=mk(shellTex), dash=mk(dashTex); g.add(shell,dash);
+      const core=new THREE.Sprite(new THREE.SpriteMaterial({map:coreTex,blending:THREE.AdditiveBlending,transparent:true,depthWrite:false})); core.scale.setScalar(2*S); g.add(core);
+      const syss=[], rings=[];
+      [1,2,3].forEach(k=>{ const sys=new THREE.Group(); g.add(sys); syss.push({sys,ax:AXS[k][0],per:AXS[k][1],dir:AXS[k][2],ang:R()*6});
+        SIS[k].forEach(([d,tx,ty,seg,dir,ne,op,dashed])=>{
+          const tilt=new THREE.Group(); tilt.rotation.set(tx*deg,ty*deg,0); sys.add(tilt);
+          const ring=new THREE.Group(); tilt.add(ring); rings.push({ring,seg,dir}); const r=d/200*S, n=rings.length;
+          const mat=new THREE.MeshBasicMaterial({color:0x00f3ff,transparent:true,opacity:op,blending:THREE.AdditiveBlending,depthWrite:false}), gm=mat.clone(); gm.opacity=op*.25;
+          if(!dashed){ ring.add(new THREE.Mesh(new THREE.TorusGeometry(r,.012*S,6,96),mat),new THREE.Mesh(new THREE.TorusGeometry(r,.035*S,6,96),gm)); }
+          else for(let j=0;j<28;j++){ const m=new THREE.Mesh(new THREE.TorusGeometry(r,.012*S,6,4,.12),mat); m.rotation.z=j*Math.PI*2/28; ring.add(m); }
+          for(let e=0;e<ne;e++){ const a=Math.PI*2/ne*e+n*.4, sp=new THREE.Sprite(new THREE.SpriteMaterial({map:elecTex,color:COL[(n+e)%3],blending:THREE.AdditiveBlending,transparent:true,depthWrite:false}));
+            sp.scale.setScalar((.16+((n+e)%3)*.04)*S); sp.position.set(Math.cos(a)*r,Math.sin(a)*r,0); ring.add(sp); }
+        }); });
+      const mats=[]; g.traverse(o=>{ const m=o.material; if(m&&!mats.some(q=>q.m===m)) mats.push({m,b:m.opacity}); });
+      g.userData={shell,dash,core,syss,rings,S,mats}; scene.add(g); return g;
+    }
+    function orbUpdate(o,dt,spd,t,mul,al){
+      const u=o.userData; u.mats.forEach(q=>q.m.opacity=q.b*al); u.rings.forEach(q=>q.ring.rotation.z+=q.dir*mul*dt*Math.PI*2/q.seg*spd);
+      u.syss.forEach(q=>{ q.ang+=q.dir*mul*dt*Math.PI*2/q.per*spd; q.sys.setRotationFromAxisAngle(q.ax,q.ang); });
+      u.shell.quaternion.copy(camera.quaternion); u.dash.quaternion.copy(camera.quaternion); u.dash.rotateZ(-t*Math.PI*2/10*mul);
+      u.core.scale.setScalar(2*u.S*(1+.05*Math.sin(t*2.1))); u.shell.scale.setScalar(1+.02*Math.sin(t*2.1));
+    }
+    const mA=makeOrb(1.45), mB=makeOrb(1.45);
+
+    /* Explosión: micro partículas, fuego, escombros y ondas */
+    const N=6000,pp=new Float32Array(N*3),pc=new Float32Array(N*3),pv=new Float32Array(N*3),pg=new THREE.BufferGeometry();
+    pg.setAttribute('position',new THREE.BufferAttribute(pp,3)); pg.setAttribute('color',new THREE.BufferAttribute(pc,3));
+    const pm=new THREE.PointsMaterial({...ADD,size:.14,vertexColors:true}), dust=new THREE.Points(pg,pm); dust.visible=false; dust.frustumCulled=false; scene.add(dust);
+    const fire=Array.from({length:100},()=>{ const s=sprite(0xff7a1a,1); s.visible=false; scene.add(s); return {s,life:0,max:1,v:V3(0,0,0),sz:1}; });
+    const deb=Array.from({length:70},()=>{ const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:0x556070,emissive:0x0a2a3a,flatShading:true,roughness:.8}));
+      m.scale.set(.15+R()*.3,.15+R()*.3,.15+R()*.3); m.visible=false; scene.add(m); return {m,v:V3(0,0,0),r:V3(R()*6,R()*6,R()*6)}; });
+    const shocks=[0x66e6ff,0xff9fe0].map(c=>{ const m=new THREE.Mesh(new THREE.RingGeometry(.9,1,96),new THREE.MeshBasicMaterial({color:c,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); m.visible=false; scene.add(m); return m; });
+    let exploded=false, et=0, flash=0, shake=0;
+    function explode(){
+      exploded=true; et=0; flash=1; shake=1; mA.visible=mB.visible=false; dust.visible=true; pm.opacity=1; mA.updateMatrixWorld(true);
+      const cols=[[0,.9,1],[1,1,1],[1,.5,.1],[1,.2,.8],[.5,.6,1]];
+      for(let i=0;i<N;i++){
+        const p=i<900?(i<450?mA:mB).position.clone().add(V3(R()-.5,R()-.5,R()-.5).normalize().multiplyScalar(1.45*mA.scale.x*(1+R()*.4))):V3((R()-.5)*2.5,(R()-.5)*2.5,(R()-.5)*2.5);
+        const d=p.clone().normalize().add(V3(R()-.5,R()-.5,R()-.5).multiplyScalar(.8)).normalize().multiplyScalar(1.5+Math.pow(R(),2)*(i<900?10:26));
+        pp.set([p.x,p.y,p.z],i*3); pv.set([d.x,d.y,d.z],i*3); pc.set(cols[(R()*5)|0],i*3); }
+      fire.forEach(o=>{ o.sz=3+R()*3; o.max=o.life=.8+R()*1.4; o.s.position.set((R()-.5)*2,(R()-.5)*2,(R()-.5)*2);
+        o.v.set(R()-.5,R()-.5,R()-.5).normalize().multiplyScalar(1+R()*5); o.s.material.color.set([0xff7a1a,0xff30c0,0x30e0ff][(R()*3)|0]); o.s.visible=true; });
+      deb.forEach(o=>{ o.m.visible=true; o.m.position.set((R()-.5)*3,(R()-.5)*3,(R()-.5)*3); o.v.set(R()-.5,R()-.5,R()-.5).normalize().multiplyScalar(4+R()*12); });
+      shocks.forEach(m=>m.visible=true); boomLight.intensity=150;
+    }
+    function updExplosion(dt){
+      if(!exploded) return; et+=dt;
+      const dr=Math.pow(.45,dt);
+      for(let i=0;i<N;i++){ const j=i*3; pv[j]*=dr; pv[j+1]*=dr; pv[j+2]*=dr; pp[j]+=pv[j]*dt; pp[j+1]+=pv[j+1]*dt; pp[j+2]+=pv[j+2]*dt; }
+      pg.attributes.position.needsUpdate=true; pm.opacity=cl(1-(et-3)/4);
+      fire.forEach(o=>{ if(o.life<=0){o.s.visible=false;return;} o.life-=dt; const k=cl(o.life/o.max); o.s.position.addScaledVector(o.v,dt); o.v.multiplyScalar(Math.pow(.25,dt));
+        o.s.scale.setScalar(o.sz*(.4+(1-k)*1.3)); o.s.material.opacity=k; });
+      deb.forEach(o=>{ o.m.position.addScaledVector(o.v,dt); o.m.rotation.x+=o.r.x*dt; o.m.rotation.y+=o.r.y*dt; if(et>6) o.m.visible=false; });
+      shocks.forEach((m,i)=>{ m.lookAt(camera.position); m.scale.setScalar(.5+et*(i?9:16)); m.material.opacity=cl(1-et/(i?1.8:1.3)); });
+      boomLight.intensity=150*Math.pow(.03,et);
+    }
+
+    /* Sonido (WebAudio) */
+    let actx, master;
+    function audio(){
+      if(actx) actx.close(); actx=new (window.AudioContext||window.webkitAudioContext)(); const t=actx.currentTime;
+      const out=actx.createGain(); out.gain.value=.9; out.connect(actx.destination); master=out;
+      const dl=actx.createDelay(); dl.delayTime.value=.25; const fb=actx.createGain(); fb.gain.value=.38; const wet=actx.createGain(); wet.gain.value=.3;
+      out.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(actx.destination);
+      const G=()=>{ const g=actx.createGain(); g.gain.value=0; g.connect(out); return g; };
+      const noise=d=>{ const b=actx.createBuffer(1,actx.sampleRate*d,actx.sampleRate),a=b.getChannelData(0); for(let i=0;i<a.length;i++)a[i]=R()*2-1; const s=actx.createBufferSource(); s.buffer=b; return s; };
+      const osc=(ty,f0,f1,a,b,pk,att=.02)=>{ const o=actx.createOscillator(),g=G(); o.type=ty; o.frequency.setValueAtTime(f0,t+a); o.frequency.exponentialRampToValueAtTime(f1,t+b);
+        g.gain.setValueAtTime(0,t+a); g.gain.linearRampToValueAtTime(pk,t+a+att); g.gain.exponentialRampToValueAtTime(.0001,t+b); o.connect(g); o.start(t+a); o.stop(t+b+.05); };
+      const nz=(ft,f0,f1,a,b,pk)=>{ const s=noise(b-a+.1),f=actx.createBiquadFilter(),g=G(); f.type=ft; f.frequency.setValueAtTime(f0,t+a); f.frequency.exponentialRampToValueAtTime(f1,t+b);
+        g.gain.setValueAtTime(0,t+a); g.gain.linearRampToValueAtTime(pk,t+a+.03); g.gain.exponentialRampToValueAtTime(.0001,t+b); s.connect(f); f.connect(g); s.start(t+a); };
+      const riser=(ty,f0,f1,a,b,pk,noiseSrc)=>{ const o=noiseSrc?noise(b-a+.1):actx.createOscillator(),g=G(),f=actx.createBiquadFilter();
+        if(noiseSrc){ f.type='bandpass'; f.frequency.setValueAtTime(f0,t+a); f.frequency.exponentialRampToValueAtTime(f1,t+b); o.connect(f); f.connect(g); }
+        else { o.type=ty; o.frequency.setValueAtTime(f0,t+a); o.frequency.exponentialRampToValueAtTime(f1,t+b); o.connect(g); }
+        g.gain.setValueAtTime(.0001,t+a); g.gain.exponentialRampToValueAtTime(pk,t+b); g.gain.setValueAtTime(0,t+b+.01); o.start(t+a); if(!noiseSrc) o.stop(t+b+.05); };
+      riser('sine',40,120,0,T_IMPACT,.4); riser('sawtooth',60,500,1,T_IMPACT,.1); riser(0,200,3000,1,T_IMPACT,.25,true);
+      nz('lowpass',8000,60,T_IMPACT,T_IMPACT+3.2,1.2); osc('sine',95,22,T_IMPACT,T_IMPACT+1.8,1.3,.01); nz('highpass',2000,5000,T_IMPACT,T_IMPACT+.3,.9);
+      nz('bandpass',3500,800,T_IMPACT+.1,T_IMPACT+2.2,.5); osc('sawtooth',220,30,T_IMPACT,T_IMPACT+2,.25);
+      [262,392,523,784].forEach((f,i)=>osc('sine',f,f*.999,T_TITLE+i*.18,T_TITLE+i*.18+1.8,.18)); osc('sine',65,64,T_TITLE,T_TITLE+2.5,.4,.05); osc('triangle',1568,1560,T_TITLE+.6,T_TITLE+2.6,.06);
+      osc('sawtooth',60,58,T_FLICK,T_OFF,.07,.3);
+      F1.forEach(([a,d])=>{ nz('highpass',1500,6000,a,a+d+.06,.5); osc('square',120,118,a,a+d+.05,.18,.005); });
+      osc('sawtooth',600,30,T_OFF,T_OFF+.9,.35,.01); nz('highpass',4000,500,T_OFF,T_OFF+.9,.3); osc('sine',60,40,T_OFF+.88,T_OFF+1.2,.5,.005);
+      riser('sawtooth',40,900,T_ON,T_ON+.5,.25); nz('highpass',500,8000,T_ON,T_ON+.5,.3);
+      F2.forEach(([a,d])=>{ nz('highpass',1500,6000,a,a+d+.06,.5); osc('square',120,118,a,a+d+.05,.18,.005); });
+      [659,880,1318].forEach((f,i)=>osc('sine',f,f,T_ON+1.05+i*.12,T_ON+2.6,.18));
+    }
+
+    /* Efecto de pantalla: parpadeo, colapso tipo CRT y reencendido */
+    const inW=(F,t)=>F.some(([a,d])=>t>=a&&t<a+d);
+    function screenState(t){
+      let sx=1,sy=1,op=1,br=1,gl=0;
+      if(t>=T_FLICK&&t<T_OFF){ gl=1; op=inW(F1,t)?.04:.78+.22*Math.sin(t*41); }
+      else if(t>=T_OFF&&t<T_OFF+.9){ const p=(t-T_OFF)/.9; gl=1;
+        if(p<.5){ sy=Math.max(.012,1-ease(p/.5)); br=1+2*p; } else if(p<.8){ sy=.012; sx=Math.max(.01,1-ease((p-.5)/.3)); br=2; } else { sy=.012; sx=.01; br=2; op=1-(p-.8)/.2; } }
+      else if(t>=T_OFF+.9&&t<T_ON) op=0;
+      else if(t>=T_ON&&t<T_ON+.5){ const p=(t-T_ON)/.5; gl=1; br=2; if(p<.4){ sy=.012; sx=.01+.99*(p/.4); } else { sy=.012+.988*ease((p-.4)/.6); } }
+      else if(t>=T_ON+.5&&t<T_END-.2){ gl=.6; if(inW(F2,t)) op=.04; }
+      return {sx,sy,op,br,gl};
+    }
+    const nctx=$('noise').getContext('2d'), nimg=nctx.createImageData(96,54);
+    function drawNoise(){ for(let i=0;i<nimg.data.length;i+=4){ const v=R()*255; nimg.data[i]=nimg.data[i+1]=v; nimg.data[i+2]=v*1.1; nimg.data[i+3]=255; } nctx.putImageData(nimg,0,0); }
+
+    /* Bucle principal */
+    let running=false, ended=false, t0=0, lastSub='', muerto=false, raf=0;
+    const clock=new THREE.Clock();
+    function frame(){
+      if(muerto) return;
+      raf=requestAnimationFrame(frame);
+      const dt=Math.min(clock.getDelta(),.05), now=clock.elapsedTime, tt=running?now-t0:(ended?T_END:0);
+      const u=cl(tt/T_IMPACT);
+      const k=.35+2.05*(1-Math.pow(u,1.5)), rr=1.45*k;
+      const th=Math.PI+4*Math.PI*Math.pow(u,1.6), rho=rr+(11-1.45*2.4)*(1-Math.pow(u,1.4)), c=Math.cos(th), sn=Math.sin(th);
+      mA.scale.setScalar(k); mB.scale.setScalar(k);
+      mA.position.set(rho*c,rho*.35*sn,rho*.45*sn); mB.position.set(-rho*c,-rho*.35*sn,-rho*.45*sn);
+      { const spd=1+u*3, al=ease(cl(tt/2.5)); orbUpdate(mA,dt,spd,now,1,al); orbUpdate(mB,dt,spd,now,-1,al); }
+      if(tt>=T_IMPACT && !exploded && running) explode();
+      const hit=tt>=T_IMPACT?Math.exp(-(tt-T_IMPACT)*.8):0;
+      gp.rotation.y+=dt*(.05+1.5*hit); gal.scale.setScalar(1+.15*hit*Math.sin((tt-T_IMPACT)*8)); galMat.opacity=.9+.1*hit;
+      const cz=tt<T_IMPACT?18-5*u*u:13+Math.min(3,(tt-T_IMPACT)*.6);
+      camera.position.set(Math.sin(now*.4)*.6,1.5+Math.sin(now*.3)*.3,cz);
+      const sh=(tt<T_IMPACT?Math.pow(u,4)*.15:0)+shake*.5; if(sh>.001) camera.position.add(V3(R()-.5,R()-.5,R()-.5).multiplyScalar(sh));
+      camera.lookAt(0,0,0); shake*=Math.pow(.04,dt);
+      updExplosion(dt);
+      $('flash').style.opacity=flash; flash*=Math.pow(.01,dt);
+      const to=cl((tt-T_TITLE)/1.2), title=$('title'), sub=$('sub'), st=screenState(tt);
+      title.style.opacity=to; if(!st.gl) title.style.transform='translateY(-50%) scale('+(1.1-.1*to)+')';
+      else { title.style.transform=`translateY(-50%) translate(${(R()-.5)*14*st.gl}px,${(R()-.5)*4*st.gl}px)`;
+        title.style.textShadow=`${(R()-.5)*10}px 0 #ff2d6f,${(R()-.5)*-10}px 0 #00f0ff,0 0 30px #00a0ff`; }
+      if(!st.gl) title.style.textShadow='';
+      sub.style.opacity=cl((tt-T_TITLE-1.5)/1);
+      const msg=tt>=T_FLICK&&tt<T_OFF?'⚠ ENERGÍA INESTABLE':tt>=T_ON&&tt<T_ON+1.2?'REINICIANDO SISTEMA…':'CORE v3 · ESTABLE';
+      if(msg!==lastSub){ sub.textContent=msg; sub.style.color=msg[0]==='⚠'?'#ff4d6d':'#7fdcff'; lastSub=msg; }
+      const stage=$('stage'); stage.style.transform=`scale(${st.sx},${st.sy})`; stage.style.opacity=st.op; stage.style.filter=st.br>1?`brightness(${st.br})`:'';
+      $('noise').style.opacity=st.gl*.3*R(); $('scan').style.opacity=st.gl*.5; if(st.gl) drawNoise();
+      if(running&&tt>=T_END) salir();
+      renderer.render(scene,camera);
+    }
+
+    /* Al terminar (o al saltar): todo se funde a negro y aparece tu IA. La intro no se vuelve a mostrar. */
+    let saliendo=false;
+    function salir(){
+      if(saliendo) return; saliendo=true; running=false; ended=true;
+      $('ui').style.display='none';
+      ['stage','noise','scan','flash'].forEach(id=>{ const e=$(id); e.style.transition='opacity .6s ease'; e.style.opacity='0'; });
+      muerto=true; cancelAnimationFrame(raf);                       // congela el último cuadro mientras se funde
+      if(actx&&master){ try{ master.gain.setValueAtTime(master.gain.value,actx.currentTime); master.gain.linearRampToValueAtTime(0,actx.currentTime+1.4); }catch(e){} }
+      setTimeout(()=>{ const ov=document.getElementById('introOverlay'); ov.style.opacity='0'; document.documentElement.style.overflow=prevOverflow; }, 700);   // se revela la IA
+      setTimeout(limpiar, 1900);
+    }
+    function limpiar(){
+      removeEventListener('resize',onResize);
+      try{ if(actx){ actx.close(); actx=null; } }catch(e){}
+      try{ renderer.dispose(); renderer.forceContextLoss(); }catch(e){}
+      const ov=document.getElementById('introOverlay'); if(ov) ov.remove();
+      const st=document.getElementById('introStyle'); if(st) st.remove();
+      window.dispatchEvent(new CustomEvent('oneiacool:intro-done'));
+    }
+    function begin(){
+      exploded=false; flash=0; shake=0; mA.visible=mB.visible=true; dust.visible=false; boomLight.intensity=0;
+      $('hint').textContent='Toca la pantalla para saltar';
+      ended=false; running=true; t0=clock.elapsedTime;
+      try{ audio(); if(actx&&actx.state==='suspended') actx.resume(); }catch(e){}   // el navegador puede bloquear el sonido hasta que haya interacción
+    }
+    document.getElementById('introOverlay').addEventListener('click',()=>{ salir(); });   // clic en cualquier parte = saltar
+    const onResize=()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)};
+    addEventListener('resize',onResize);
+    frame();
+    begin();                                                        // arranca sola, sin botón
+    return true;
+
+  }
+  function arrancar(){ var ok=false; try{ ok=iniciar(); }catch(e){ try{console.error('Intro:',e);}catch(_){} } if(!ok) abortar(); }
+
+  if(window.THREE){ arrancar(); return; }
+  var done=false, tm=setTimeout(function(){ if(!done){ done=true; abortar(); } },9000);
+  var sc=document.createElement('script'); sc.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  sc.onload=function(){ if(done) return; done=true; clearTimeout(tm); arrancar(); };
+  sc.onerror=function(){ if(done) return; done=true; clearTimeout(tm); abortar(); };
+  document.head.appendChild(sc);
+})();
+</script>
+
     <canvas id="galaxiaFondo" aria-hidden="true"></canvas>
 
     <div class="header-row">
@@ -936,12 +1229,14 @@
 
     <div id="status">Sistemas en espera. Introduce tu API Key de Groq y haz clic en Iniciar.</div>
 
-    <button id="keyToggle" onclick="alternarPanelClave()" title="Administrar tu API Key de Groq">🔑 API Key</button>
+    <button id="keyToggle" onclick="alternarPanelClave()" title="Administrar tus API Keys">🔑 API Key</button>
     <div class="config-panel" id="configPanel">
         <label for="apiKeyInput">API Key de Groq (se guarda una sola vez en este dispositivo)</label>
         <input type="password" id="apiKeyInput" placeholder="Pega tu gsk_ aquí..." value="" autocomplete="off">
         <div id="keyInfo"></div>
         <button id="keyDeleteBtn" onclick="eliminarGroqKey()">🗑️ Eliminar API Key de Groq</button>
+        <button id="moreKeysToggle" onclick="alternarMasClaves()">➕ Más API Keys (Claude, Gemini, Nano Banana, ChatGPT…)</button>
+        <div id="moreKeys"></div>
     </div>
 
     <button id="startButton" onclick="activarJarvis()">INICIAR SISTEMA</button>
@@ -1017,9 +1312,10 @@
             <h3>📺 Control de televisor</h3>
             <div class="tv-row"><input id="tvPuenteInput" placeholder="Código de enlace (opcional: solo fuera de casa)" autocomplete="off" autocapitalize="characters" onchange="tvGuardarPuente()"></div>
             <div class="tv-estado" id="tvEstadoTxt">Comprobando el puente de TV...</div>
-            <div class="tv-row" id="tvInstalarFila" style="display:none;flex-direction:column;align-items:stretch;gap:6px;">
-                <a class="tv-btn primario" id="tvInstalarBtn" href="#" download style="text-decoration:none;text-align:center;display:block;">⬇ Descargar puente de TV (solo una vez)</a>
-                <div class="tv-mini">1) Descárgalo y ábrelo con doble clic (si Windows avisa, pulsa "Más información" → "Ejecutar de todas formas"). 2) Espera unos segundos. 3) Vuelve aquí: se conecta solo.</div>
+            <div class="tv-row" id="tvInstalarFila" style="display:flex;flex-direction:column;align-items:stretch;gap:6px;">
+                <a class="tv-btn primario" id="tvInstalarBtn" href="https://github.com/marioalfredobeltrantorres-debug/oneiacool-backend/releases/latest/download/ONEIACOOL-Puente-TV.exe" download style="text-decoration:none;text-align:center;display:block;">⬇ Descargar puente para Windows (.exe)</a>
+                <a class="tv-btn" id="tvInstalarZipBtn" href="https://github.com/marioalfredobeltrantorres-debug/oneiacool-backend/releases/latest/download/ONEIACOOL-Puente-TV.zip" download style="text-decoration:none;text-align:center;display:block;">⬇ Descargar para Mac / Linux (.zip)</a>
+                <div class="tv-mini" id="tvInstalarAyuda">Solo una vez, en la computadora conectada a la misma WiFi del TV. <b>Windows:</b> descarga el .exe y ábrelo con doble clic (si avisa, pulsa "Más información" → "Ejecutar de todas formas"). <b>Mac/Linux:</b> requiere <a href="https://nodejs.org" target="_blank" rel="noopener" style="color:inherit">Node.js LTS</a>; descomprime el .zip y ejecuta <code>instalar-mac-linux.sh</code>. Después vuelve aquí: se conecta solo.</div>
             </div>
             <div class="tv-row">
                 <input id="tvIpInput" placeholder="IP del televisor (ej. 192.168.1.50)">
@@ -1780,13 +2076,13 @@
 
         // ======================================================================
         // ======= CLAVE DE API KEY DE YOUTUBE (Google Cloud Console)
-        const YOUTUBE_API_KEY = "AIzaSyB-OXvuTlAF-xVem4fE_O4zAYr9g6ELssE";
+        let YOUTUBE_API_KEY = "AIzaSyB-OXvuTlAF-xVem4fE_O4zAYr9g6ELssE";
         // ======================================================================
 
         // ======================================================================
         // ======= CLAVE DE LA API KEY DE CLAUDE (Anthropic, empieza con sk-ant-)
         // Consíguela en https://console.anthropic.com/settings/keys
-        const CLAUDE_API_KEY = "";
+        let CLAUDE_API_KEY = "";
         // ======================================================================
 
         // ██████████████████████████████████████████████████████████████████
@@ -1796,7 +2092,7 @@
         // ██   Consíguela/cámbiala en https://aistudio.google.com/apikey   ██
         // ██                                                                ██
         // ██████████████████████████████████████████████████████████████████
-        const NANO_BANANA_API_KEY = "";
+        let NANO_BANANA_API_KEY = "";
         // ██████████████████████████████████████████████████████████████████
         // ██                                                                ██
         // ██   CLAVE DE POLLINATIONS (respaldo gratis de imágenes)          ██
@@ -1814,7 +2110,7 @@
         // confiable sin clave. Con la clave gratuita de abajo, el respaldo
         // usa el dominio nuevo y correcto (gen.pollinations.ai), que sí
         // funciona de forma consistente.
-        const POLLINATIONS_API_KEY = "sk_sktzYD5bKG8m5MurxR8WkDWxCPHp2kYz";
+        let POLLINATIONS_API_KEY = "sk_sktzYD5bKG8m5MurxR8WkDWxCPHp2kYz";
         // ██████████████████████████████████████████████████████████████████
         // Nota: "Nano Banana" es el apodo del modelo de generación/edición de
         // imágenes de Google (gemini-2.5-flash-image). Usa aquí tu clave de
@@ -1832,7 +2128,144 @@
         // ██   PÉGALA AQUÍ ABAJO, ENTRE COMILLAS                            ██
         // ██                                                                ██
         // ██████████████████████████████████████████████████████████████████
-        const HUGGINGFACE_API_KEY = "";
+        let HUGGINGFACE_API_KEY = "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";
+
+        // =====================================================================
+        //  ADMINISTRADOR DE API KEYS OPCIONALES
+        //  En 🔑 API Key cada proveedor tiene su propia sección para pegar,
+        //  guardar y eliminar su clave. Se guardan SOLO en este dispositivo
+        //  (localStorage). La clave de Groq no se toca: sigue con su cuadro.
+        //  Una clave eliminada no vuelve a aparecer aunque venga integrada
+        //  en este archivo.
+        // =====================================================================
+        const KEYS_STORAGE = 'oneia_keys_v1';
+        const OPENAI_MODEL = 'gpt-4o-mini';            // modelo que usa el respaldo de ChatGPT (cámbialo aquí si quieres otro)
+        const GEMINI_CHAT_MODEL = 'gemini-2.5-flash';  // modelo que usa el respaldo de Gemini
+        let OPENAI_API_KEY = '', GEMINI_API_KEY = '', OTRO_API_KEY = '', OTRO_API_URL = '', OTRO_API_MODEL = '';
+        const CLAVES_INTEGRADAS = { claude: CLAUDE_API_KEY, nano: NANO_BANANA_API_KEY, pollinations: POLLINATIONS_API_KEY, huggingface: HUGGINGFACE_API_KEY, youtube: YOUTUBE_API_KEY };
+
+        const PROVEEDORES_CLAVES = [
+            { id: 'claude', nombre: 'Claude (Anthropic)', prefijo: 'sk-ant-', min: 30, enlace: 'https://console.anthropic.com/settings/keys', uso: 'Respaldo del chat y mejor redacción de documentos.' },
+            { id: 'gemini', nombre: 'Gemini (Google AI Studio)', min: 20, enlace: 'https://aistudio.google.com/apikey', uso: 'Respaldo del chat si Groq falla.' },
+            { id: 'nano', nombre: 'Nano Banana (imágenes de Google)', min: 20, enlace: 'https://aistudio.google.com/apikey', uso: 'Generación de imágenes. Si la dejas vacía usa la clave de Gemini.' },
+            { id: 'openai', nombre: 'ChatGPT (OpenAI)', prefijo: 'sk-', min: 20, enlace: 'https://platform.openai.com/api-keys', uso: 'Respaldo del chat si Groq falla.' },
+            { id: 'pollinations', nombre: 'Pollinations (imágenes gratis)', min: 8, enlace: 'https://enter.pollinations.ai', uso: 'Respaldo gratuito para generar imágenes.' },
+            { id: 'huggingface', nombre: 'Hugging Face (imágenes)', prefijo: 'hf_', min: 20, enlace: 'https://huggingface.co/settings/tokens', uso: 'Token de lectura para generar imágenes.' },
+            { id: 'otro', nombre: 'Otro proveedor (compatible con OpenAI)', otro: true, uso: 'OpenRouter, DeepSeek, Mistral, Together y similares: pon su URL base, el nombre del modelo y tu clave. Se usa como respaldo del chat.' }
+        ];
+
+        let clavesUsuario = {};
+        const clavesConfirmando = {};
+        function cargarClavesUsuario() { try { clavesUsuario = JSON.parse(localStorage.getItem(KEYS_STORAGE) || '{}') || {}; } catch (e) { clavesUsuario = {}; } }
+        function persistirClavesUsuario() { try { localStorage.setItem(KEYS_STORAGE, JSON.stringify(clavesUsuario)); return true; } catch (e) { return false; } }
+        function claveEfectiva(id) { return (id in clavesUsuario) ? String(clavesUsuario[id] || '') : String(CLAVES_INTEGRADAS[id] || ''); }
+        function aplicarClavesUsuario() {
+            CLAUDE_API_KEY = claveEfectiva('claude');
+            GEMINI_API_KEY = claveEfectiva('gemini');
+            NANO_BANANA_API_KEY = claveEfectiva('nano') || claveEfectiva('gemini');
+            OPENAI_API_KEY = claveEfectiva('openai');
+            POLLINATIONS_API_KEY = claveEfectiva('pollinations');
+            HUGGINGFACE_API_KEY = claveEfectiva('huggingface');
+            YOUTUBE_API_KEY = CLAVES_INTEGRADAS.youtube;   // la clave de YouTube vive SOLO en el código (arriba), ya no hay tarjeta en el panel
+            OTRO_API_KEY = claveEfectiva('otro');
+            OTRO_API_URL = claveEfectiva('otro_url');
+            OTRO_API_MODEL = claveEfectiva('otro_model');
+        }
+        cargarClavesUsuario();
+        aplicarClavesUsuario();
+
+        function htmlTarjetaClave(p) {
+            const v = claveEfectiva(p.id);
+            const propia = (p.id in clavesUsuario) && !!v;
+            const estado = v
+                ? `✓ ${propia ? 'Guardada en este dispositivo' : 'Integrada en la app'} (••••${escaparHTML(v.slice(-4))})`
+                : 'Sin clave';
+            const enlace = p.enlace ? ` <a href="${p.enlace}" target="_blank" rel="noopener">Conseguir clave</a>` : '';
+            const campos = p.otro
+                ? `<input type="text" id="kin_otro_url" placeholder="URL base, ej. https://openrouter.ai/api/v1" autocomplete="off" value="${escaparHTML(claveEfectiva('otro_url'))}">
+                   <input type="text" id="kin_otro_model" placeholder="Modelo, ej. deepseek/deepseek-chat" autocomplete="off" value="${escaparHTML(claveEfectiva('otro_model'))}">
+                   <input type="password" id="kin_otro" placeholder="${v ? 'Pega una nueva para reemplazar' : 'Pega aquí tu clave...'}" autocomplete="off">`
+                : `<input type="password" id="kin_${p.id}" placeholder="${v ? 'Pega una nueva para reemplazar' : 'Pega aquí tu clave...'}" autocomplete="off">`;
+            return `<div class="kcard" id="kcard_${p.id}">
+                <div class="ktitulo">${escaparHTML(p.nombre)}</div>
+                <div class="kuso">${escaparHTML(p.uso)}${enlace}</div>
+                ${campos}
+                <div class="kestado${v ? ' ok' : ''}">${estado}</div>
+                <div class="kfila">
+                    <button class="kguardar" data-act="guardar" data-id="${p.id}">💾 Guardar</button>
+                    ${v ? `<button class="keliminar" data-act="eliminar" data-id="${p.id}">🗑️ Eliminar</button>` : ''}
+                </div>
+                <div class="kmsg" id="kmsg_${p.id}"></div>
+            </div>`;
+        }
+        function renderTarjetaClave(id, msg, esError) {
+            const p = PROVEEDORES_CLAVES.find(x => x.id === id);
+            const el = document.getElementById('kcard_' + id);
+            if (!p || !el) return;
+            el.outerHTML = htmlTarjetaClave(p);
+            const m = document.getElementById('kmsg_' + id);
+            if (m && msg) { m.textContent = msg; m.className = 'kmsg ' + (esError ? 'err' : 'ok'); }
+        }
+        function renderPanelClaves() {
+            const cont = document.getElementById('moreKeys');
+            if (cont) cont.innerHTML = PROVEEDORES_CLAVES.map(htmlTarjetaClave).join('');
+        }
+        function alternarMasClaves() {
+            const cont = document.getElementById('moreKeys');
+            const abrir = cont.style.display !== 'flex';
+            if (abrir) renderPanelClaves();
+            cont.style.display = abrir ? 'flex' : 'none';
+        }
+        function validarClaveProveedor(p, v) {
+            if (!v) return 'Pega primero tu clave.';
+            if (/\s/.test(v)) return 'La clave no debe tener espacios.';
+            if (p.prefijo && !v.startsWith(p.prefijo)) return `Una clave de ${p.nombre.split(' (')[0]} empieza con "${p.prefijo}".`;
+            if (v.length < (p.min || 20)) return 'La clave parece incompleta. Cópiala completa.';
+            return '';
+        }
+        function guardarClaveProveedor(id) {
+            const p = PROVEEDORES_CLAVES.find(x => x.id === id);
+            const val = (document.getElementById('kin_' + id)?.value || '').trim();
+            const errMsg = (t) => { const m = document.getElementById('kmsg_' + id); if (m) { m.textContent = t; m.className = 'kmsg err'; } };
+            if (p.otro) {
+                const url = (document.getElementById('kin_otro_url')?.value || '').trim();
+                const modelo = (document.getElementById('kin_otro_model')?.value || '').trim();
+                if (!/^https?:\/\/\S+$/i.test(url)) return errMsg('Pon la URL base completa, que empiece con https://');
+                if (!modelo || /\s/.test(modelo)) return errMsg('Pon el nombre del modelo, sin espacios.');
+                if (!val && !claveEfectiva('otro')) return errMsg('Pega también la clave.');
+                clavesUsuario.otro_url = url; clavesUsuario.otro_model = modelo;
+                if (val) clavesUsuario.otro = val;
+            } else {
+                const e = validarClaveProveedor(p, val);
+                if (e) return errMsg(e);
+                clavesUsuario[id] = val;
+            }
+            if (!persistirClavesUsuario()) return errMsg('No pude guardar en este dispositivo (¿almacenamiento bloqueado?).');
+            aplicarClavesUsuario();
+            renderTarjetaClave(id, '✓ Clave guardada. Ya se usa en la app.', false);
+        }
+        // Sin confirm(): el WebView de Android lo cancela. Se toca dos veces, como con Groq.
+        function eliminarClaveProveedor(id) {
+            const btn = document.querySelector(`#kcard_${id} .keliminar`);
+            if (!clavesConfirmando[id]) {
+                clavesConfirmando[id] = true;
+                if (btn) btn.textContent = '¿Seguro? Toca de nuevo';
+                setTimeout(() => { clavesConfirmando[id] = false; const b = document.querySelector(`#kcard_${id} .keliminar`); if (b) b.textContent = '🗑️ Eliminar'; }, 4000);
+                return;
+            }
+            clavesConfirmando[id] = false;
+            clavesUsuario[id] = '';
+            if (id === 'otro') { clavesUsuario.otro_url = ''; clavesUsuario.otro_model = ''; }
+            persistirClavesUsuario();
+            aplicarClavesUsuario();
+            renderTarjetaClave(id, 'Clave eliminada de este dispositivo.', false);
+        }
+        document.addEventListener('click', e => {
+            const b = e.target.closest && e.target.closest('#moreKeys button[data-act]');
+            if (!b) return;
+            if (b.dataset.act === 'guardar') guardarClaveProveedor(b.dataset.id);
+            else if (b.dataset.act === 'eliminar') eliminarClaveProveedor(b.dataset.id);
+        });
         // ██████████████████████████████████████████████████████████████████
         // ⚠️ ACTUALIZACIÓN: desde mediados de 2025 Hugging Face sacó los
         // modelos de generación de imágenes de su nivel gratuito serverless
@@ -2255,6 +2688,10 @@
 
         function detectarAperturaApp(texto) {
             const normal = normalizarTexto(texto);
+            // Mapas, ubicación, destino y tráfico los maneja detectarComandoWaze.
+            if (detectarComandoWaze(texto)) return null;
+            // "pon música de X" es música, no "abrir un sitio llamado X".
+            if (esPedidoMusicaExplicito(quitarMuletillasInicio(normal))) return null;
             const disparaApertura =
                 /\b(abre|abrir|abreme|abrime)\b/.test(normal) ||
                 /\b(ve|vete|entra|entrar|anda|vamos)\s+a\b/.test(normal) ||
@@ -2278,7 +2715,13 @@
                 const app = APPS_WEB[clave];
                 const coincide = app.alias.some(alias => {
                     const aliasNormal = alias.trim();
-                    return normal.includes(aliasNormal) || sinEspacios.includes(aliasNormal.replace(/\s+/g, ''));
+                    // Alias cortos ("x", "gpt", "face", "word"...) solo cuentan como
+                    // palabra completa: antes "x" coincidía dentro de "netflix" y
+                    // abría X (Twitter) en vez de Netflix.
+                    const comoPalabra = new RegExp('(^|[^a-z0-9])' + aliasNormal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])').test(normal);
+                    // Versión sin espacios ("tik tok" -> "tiktok"): solo para alias largos.
+                    const sinEsp = aliasNormal.replace(/\s+/g, '');
+                    return comoPalabra || (sinEsp.length >= 5 && sinEspacios.includes(sinEsp));
                 });
                 if (coincide) return app;
             }
@@ -2286,6 +2729,9 @@
             if (normal.includes('juego')) {
                 return { nombre: 'CrazyGames', url: 'https://www.crazygames.com' };
             }
+
+            // Pedir una película no es abrir un sitio: eso lo maneja el módulo de cine.
+            if (/\b(pelicula|peliculas|film|filme)\b/.test(normal)) return null;
 
             let resto = normal
                 .replace(/\b(abre|abrir|abreme|abrime)\b/, '')
@@ -2339,30 +2785,14 @@
         }
 
         function detectarLlamarWhatsapp(texto) {
-            const normal = quitarMuletillasInicio(normalizarTexto(texto));
-            const WA = '(?:whats\\s?app|wasap|guasap|wats\\s?app)';
-            if (!new RegExp('\\b' + WA + '\\b').test(normal)) return null;
-            const hayMensaje = /\b(escribe|escribele|escribeme|manda|mandale|mandame|mandar|envia|enviale|enviame|enviar|mensaje|mensajes|mensajea|dile|dale|saluda)\b/.test(normal);
-            let esLlamada = /\b(llama|llamale|llamame|marca|marcale|llamada|videollamada)\b/.test(normal);
-            if (!esLlamada && !hayMensaje) return null;
-            if (/\bmensaje/.test(normal)) esLlamada = false;
+            const normal = normalizarTexto(texto);
+            if (!/whatsapp|wasap/.test(normal)) return null;
+            const esLlamadaOMensaje = /\b(llama|llamale|llamame|marca|marcale|escribe|escribele|manda|mandale|envia|enviale)\b/.test(normal);
+            if (!esLlamadaOMensaje) return null;
 
-            // Texto del mensaje (se toma del original para conservar mayusculas y acentos)
-            let mensaje = '';
-            const mm = texto.match(/(?:\bdiciendo\b|\by\s+(?:le\s+)?dile\s+que\b|\bdile\s+que\b|\bque\s+(?:le\s+)?diga\b|\bcon\s+el\s+(?:mensaje|texto)\b|\bque\b|:)\s*[:,]?\s*(.+)$/i);
-            if (mm) mensaje = mm[1].trim().replace(/^["“”']+|["“”']+$/g, '');
-            const parteNombre = mm ? normalizarTexto(texto.slice(0, mm.index)) : normal;
-
-            let t = quitarMuletillasInicio(parteNombre)
-                .replace(new RegExp('\\b(?:por|via|en|de|desde|con|usando)\\s+(?:el\\s+|mi\\s+)?' + WA + '\\b', 'g'), ' ')
-                .replace(new RegExp('\\b' + WA + '\\b', 'g'), ' ')
-                .replace(/\bmensaje(?:s|ito)?\b/g, ' ')
-                .replace(/\b(?:un|una)\b/g, ' ')
-                .replace(/\s+/g, ' ').trim();
-            const m = t.match(/\b(?:a|al|para|con)\s+(?:(?:el|la)\s+)?(?:contacto\s+)?(.+)$/);
-            let nombre = m ? m[1] : t.replace(/^(?:llama|llamale|llamame|marca|marcale|escribe|escribele|escribeme|manda|mandale|mandame|mandar|envia|enviale|enviame|enviar|mensajea|dile|dale|saluda|hazle|hazme|realiza|llamada|videollamada)\s*/g, '');
-            nombre = (nombre || '').replace(/[.,;:!?]+$/g, '').trim();
-            return { nombreDicho: nombre || null, esLlamada, mensaje };
+            let match = normal.match(/\b(?:llama|llamale|llamame|marca|marcale|escribe|escribele|manda|mandale|envia|enviale)\s+(?:a\s+|le\s+a\s+)?(.+?)\s+(?:por|via|en)\s+whatsapp/);
+            const nombreDicho = match ? match[1].trim() : null;
+            return { nombreDicho, esLlamada: /\b(llama|llamale|llamame|marca|marcale)\b/.test(normal) };
         }
 
         function detectarActivarAlarma(texto) {
@@ -2384,6 +2814,13 @@
             return normal.replace(/^(?:oye+|ey+|hey+|porfa(?:vor)?|por\s+favor|disculpa(?:me)?|perdon(?:a|ame)?)[,:.]?\s+/, '').trim();
         }
 
+        // Pedido explícito de música: "pon/reproduce/toca/escucha [la/una] música|canción|tema...".
+        // Lo usan Waze y la apertura de apps para NO robarle estas frases a la música
+        // (p. ej. "pon música de ..." o una canción llamada "Destino a ...").
+        function esPedidoMusicaExplicito(normal) {
+            return /^(?:pon|reproduce|toca|escucha)\w*\s+(?:el\s+|la\s+|un\s+|una\s+|algo\s+de\s+)?(?:cancion(?:es)?|musica|tema(?:s)?|rola(?:s)?|pista(?:s)?)\b/.test(normal);
+        }
+
         // El reconocimiento de voz confunde nombres de artistas urbanos
         // poco comunes con palabras parecidas en español ("Beéle" -> "Belén"
         // o "Vele", "Feid Ferxxo" -> "Fer show"/"Fercho"/"Ferecho"). Estas
@@ -2393,9 +2830,10 @@
         // Si el artista que falla no está en esta lista, agrégalo aquí
         // siguiendo el mismo patrón.
         const CORRECCIONES_ARTISTAS = [
-            [/\b(belen|beleen|be+le+n?)\b/g, 'beele'],
-            [/^vele$/, 'beele'],
-            [/\bfer\s*(show|cho+|eco|xxo|sho)\b/g, 'feid ferxxo']
+            // Beéle: el micrófono lo oye "belen", "vele", "vl", "bele", "veele"...
+            [/\b(?:belen|beleen|be+le+n?|ve+\s*le+n?|v+l|bee?l+e+)\b/g, 'beele'],
+            // Acepta que ya venga "feid" antes para no duplicarlo ("feid feid ferxxo").
+            [/\b(?:feid\s+)?fer\s*(?:show|cho+|eco|xxo|sho)\b/g, 'feid ferxxo']
         ];
 
         function corregirNombreArtista(cancion) {
@@ -2432,6 +2870,9 @@
 
             if (!cancion) return null;
 
+            // Lo que realmente se pidió, antes de limpiar "música de ...".
+            const pedidoOriginal = cancion;
+
             // Quita relleno tipo "la/una canción de", "un tema de" para
             // quedarse solo con el artista o título real (mejora la
             // búsqueda en YouTube). Antes "del cantante" (contracción
@@ -2449,6 +2890,10 @@
                 .trim();
 
             if (!cancion || cancion.length <= 1) return null;
+
+            // "ponme una película de X" / "pon el mapa" / "pon mi destino a X" NO son música.
+            if (/^(?:el\s+|la\s+|los\s+|las\s+|un\s+|una\s+|esa\s+|ese\s+)?(?:pelicula|peliculas|film|filme)\b/.test(pedidoOriginal)) return null;
+            if (/^(?:el\s+|la\s+|un\s+|una\s+|mi\s+)?(?:mapa|ubicacion|destino|ruta|trafico)\b/.test(pedidoOriginal)) return null;
 
             return corregirNombreArtista(cancion);
         }
@@ -2532,6 +2977,16 @@
         // nunca activaba la generación real y caía al chat normal.
         const VERBOS_GENERACION = /\b(genera\w*|crea\w*|creeme\w*|dibuja\w*|haz\w*|has\w*|podrias\s+\w+|puedes\s+\w+|necesito|quiero|dame)\b/;
 
+        // Verbos para pedir ARCHIVOS (Word/PDF/PowerPoint/Excel). Incluye el
+        // voseo y otras formas comunes ("haceme", "armame", "prepará",
+        // "escribime", "pasame", "redactame"...). Antes solo entendía
+        // "haz/genera/crea/dame", así que "Haceme 10 preguntas en Word..."
+        // no se reconocía y caía al chat. Es una lista aparte de
+        // VERBOS_GENERACION a propósito: esa también se usa para código e
+        // imágenes, y ahí "hace" daría falsos positivos ("¿qué hace python?").
+        const VERBOS_DOC = /\b(genera\w*|crea\w*|creeme\w*|dibuja\w*|haz\w*|has\w*|hace(?:me|nos|lo|la|le)\b|hacer\w*|hace(?=\s+(?:un|una|unos|unas|\d))|arma\w*|prepara\w*|escrib\w*|redacta\w*|elabora\w*|constru\w*|dise[nñ]\w*|pasa(?:me|nos)\b|manda(?:me|nos)\b|podrias\s+\w+|podes\s+\w+|puedes\s+\w+|necesito|necesitamos|quiero|quisiera|ocupo|dame|danos|deme)\b/;
+        const pideDocumento = (normal) => VERBOS_DOC.test(normal);
+
         // Frases de relleno como "para descargar", "que lo pueda bajar",
         // "y descargarlo" NO son el tema: son un pedido de acción sobre el
         // archivo (descargarlo), pero como suelen ir pegadas justo después
@@ -2591,28 +3046,28 @@
         function detectarGenerarPDF(texto) {
             const normal = normalizarPedidoDoc(texto);
             if (!/\bpdf\b/.test(normal)) return null;
-            if (!VERBOS_GENERACION.test(normal)) return null;
+            if (!VERBOS_DOC.test(normal)) return null;
             return limpiarTemaDoc(extraerTemaGeneracion(normal, 'pdf')) || ultimoTemaDocumento || null;
         }
 
         function detectarGenerarPPTX(texto) {
             const normal = normalizarPedidoDoc(texto);
             if (!/\b(powerpoint|power point|pptx|presentacion|presentaciones|diapositivas)\b/.test(normal)) return null;
-            if (!VERBOS_GENERACION.test(normal)) return null;
+            if (!VERBOS_DOC.test(normal)) return null;
             return limpiarTemaDoc(extraerTemaGeneracion(normal, '(?:powerpoint|power point|pptx|presentacion|diapositivas)')) || ultimoTemaDocumento || null;
         }
 
         function detectarGenerarWord(texto) {
             const normal = normalizarPedidoDoc(texto);
             if (!/\b(word|docx)\b/.test(normal)) return null;
-            if (!VERBOS_GENERACION.test(normal)) return null;
+            if (!VERBOS_DOC.test(normal)) return null;
             return limpiarTemaDoc(extraerTemaGeneracion(normal, '(?:documento\\s+de\\s+word|reporte\\s+de\\s+word|word|docx)')) || ultimoTemaDocumento || null;
         }
 
         function detectarGenerarExcel(texto) {
             const normal = normalizarPedidoDoc(texto);
             if (!/\b(excel|xlsx|hoja de calculo|hoja de datos|hoja de excel)\b/.test(normal)) return null;
-            if (!VERBOS_GENERACION.test(normal)) return null;
+            if (!VERBOS_DOC.test(normal)) return null;
             return limpiarTemaDoc(extraerTemaGeneracion(normal, '(?:hoja\\s+de\\s+calculo|hoja\\s+de\\s+excel|excel|xlsx)'));
         }
 
@@ -3007,14 +3462,43 @@
         function detectarComandoWaze(texto) {
             const normal = quitarMuletillasInicio(normalizarTexto(texto));
 
+            // Si pide música explícitamente, no es un comando de mapa
+            // (ej. la canción "Destino a la luna").
+            if (esPedidoMusicaExplicito(normal)) return null;
+
             // Tráfico: "muéstrame el tráfico", "cómo está el tráfico", "abre el tráfico"...
             if (/\btrafico\b/.test(normal)) {
                 return { tipo: 'trafico' };
             }
 
+            // Mapa a secas: "muéstrame el mapa", "abre el mapa", "mapa de [lugar]",
+            // "muéstrame mi ubicación", "dónde estoy". Antes esto caía en
+            // detectarAperturaApp (que lo mandaba a una búsqueda de Google) o en
+            // la música ("pon el mapa" se tomaba como una canción).
+            let mm = normal.match(/\b(?:muestra\w*|ensena\w*|abre\w*|ver|quiero ver|pon\w*|dame)\s+(?:me\s+)?(?:el|un|mi)\s+mapa\b(?:\s+(?:de|del|en)\s+(.+))?/);
+            if (mm) {
+                const lugarMapa = (mm[1] || '').replace(/\b(por\s+favor|porfavor)\b/g, '').replace(/[.!?]+$/, '').trim();
+                return { tipo: 'mapa', lugar: lugarMapa || null };
+            }
+            if (/^(?:el\s+)?mapa$/.test(normal) || /\bdonde estoy\b/.test(normal) ||
+                /\b(?:muestra\w*|ensena\w*|ver|cual es)\s+(?:me\s+)?(?:mi\s+)?ubicacion(?:\s+actual)?$/.test(normal)) {
+                return { tipo: 'mapa', lugar: null };
+            }
+
             let destino = null;
-            let match = normal.match(/\bdestino\s*(?:a|en|hacia|para)\s+(.+)/);
-            if (match) destino = match[1];
+
+            // "marca mi ubicación a [lugar]", "márcame la ruta a [lugar]", "ruta a [lugar]"
+            let mu = normal.match(/\bmarca\w*\s+(?:mi\s+|la\s+|una\s+)?(?:ubicacion|ruta)\s+(?:a|en|hacia|hasta|de|para)\s+(.+)/);
+            if (mu) destino = mu[1];
+            if (!destino) {
+                mu = normal.match(/\bruta\s+(?:a|hacia|hasta|para)\s+(.+)/);
+                if (mu) destino = mu[1];
+            }
+            let match = null;
+            if (!destino) {
+                match = normal.match(/\bdestino\s*(?:a|en|hacia|para)\s+(.+)/);
+                if (match) destino = match[1];
+            }
 
             if (!destino) {
                 match = normal.match(/\bnavega(?:me)?\s+(?:a|hasta|hacia)\s+(.+)/);
@@ -3171,6 +3655,35 @@
                     setStatus(mensaje, true);
                     agregarMensajeChat('assistant', mensaje);
                     await hablar('No pude obtener tu ubicación para mostrar el tráfico.');
+                }
+                estadoEscucha = 'DORMIDO';
+                setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+                return true;
+            }
+
+            if (w.tipo === 'mapa') {
+                try {
+                    if (w.lugar) {
+                        setStatus(`Buscando "${w.lugar}"...`);
+                        const sitio = await geocodificarLugar(w.lugar);
+                        if (!sitio) throw new Error('lugar no encontrado');
+                        mostrarMapaWaze({ lat: sitio.lat, lon: sitio.lon, zoom: 14, pin: true, titulo: `🗺️ Mapa: ${w.lugar}`, urlAbrir: `https://waze.com/ul?ll=${sitio.lat},${sitio.lon}` });
+                        agregarMensajeChat('assistant', `Aquí tienes el mapa de "${w.lugar}" (mira el mapa arriba del chat).`);
+                        await hablar(`Aquí tienes el mapa de ${w.lugar}.`);
+                    } else {
+                        setStatus('Ubicándote en el mapa...');
+                        const { lat, lon } = await obtenerUbicacionActual();
+                        mostrarMapaWaze({ lat, lon, zoom: 15, pin: true, titulo: '🗺️ Mapa de tu ubicación', urlAbrir: 'https://www.waze.com/live-map' });
+                        agregarMensajeChat('assistant', 'Aquí tienes el mapa con tu ubicación (mira el mapa arriba del chat).');
+                        await hablar('Aquí tienes el mapa.');
+                    }
+                } catch (e) {
+                    const mensaje = w.lugar
+                        ? `No encontré "${w.lugar}" en el mapa. Intenta decirlo más específico.`
+                        : 'No pude ubicar tu posición para mostrar el mapa (revisa el permiso de ubicación del navegador para esta página).';
+                    setStatus(mensaje, true);
+                    agregarMensajeChat('assistant', mensaje);
+                    await hablar(mensaje);
                 }
                 estadoEscucha = 'DORMIDO';
                 setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
@@ -3402,58 +3915,56 @@
             setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
         }
 
-        async function llamarPorWhatsappAccion(nombreDicho, esLlamada, mensajeTexto = '') {
-            const responder = async (msg) => {
-                agregarMensajeChat('assistant', msg);
-                await hablar(msg);
+        async function llamarPorWhatsappAccion(nombreDicho, esLlamada) {
+            await cargarContactosGuardados();
+
+            if (!Object.keys(contactosWhatsapp).length) {
+                const mensaje = 'Todavía no tienes contactos guardados. Dime "agrega el contacto de [nombre] con el número [número]" y lo recuerdo para la próxima.';
+                agregarMensajeChat('assistant', mensaje);
+                await hablar(mensaje);
                 estadoEscucha = 'DORMIDO';
                 setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
-            };
-            if (!nombreDicho) {
-                await responder('No entendí a quién quieres escribirle. Di, por ejemplo: "mándale un mensaje de WhatsApp a Juan diciendo hola".');
                 return;
             }
 
-            let numero = '', nombreFinal = nombreDicho;
-            // 1) Contactos reales del teléfono (dentro de la app Android)
-            if (window.OneiaNativo && OneiaNativo.contactoWhatsapp) {
-                const r = OneiaNativo.contactoWhatsapp(nombreDicho);
-                if (r === 'permiso') {
-                    await responder('Necesito permiso para leer tus contactos. Acéptalo y repite el comando.');
-                    return;
-                }
-                if (r) { try { const o = JSON.parse(r); numero = o.numero; nombreFinal = o.nombre; } catch (e) {} }
-            }
-            // 2) Contactos guardados a mano ("agrega el contacto de ...")
-            if (!numero) {
-                await cargarContactosGuardados();
-                const clave = encontrarContactoParecido(nombreDicho);
-                if (clave) { numero = String(contactosWhatsapp[clave]).replace(/[^\d]/g, ''); nombreFinal = clave; }
-            }
-            if (!numero) {
-                await responder(`No encontré a "${nombreDicho}" en tus contactos. Revisa cómo lo tienes guardado, o dime "agrega el contacto de ${nombreDicho} con el número ..." y lo recuerdo.`);
+            const claveContacto = nombreDicho ? encontrarContactoParecido(nombreDicho) : null;
+            if (!claveContacto) {
+                const mensaje = `No tengo guardado un contacto llamado "${nombreDicho || ''}". Dime "agrega el contacto de [nombre] con el número [número]" primero.`;
+                agregarMensajeChat('assistant', mensaje);
+                await hablar(mensaje);
+                estadoEscucha = 'DORMIDO';
+                setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
                 return;
             }
 
-            const url = `https://wa.me/${numero}` + (mensajeTexto ? `?text=${encodeURIComponent(mensajeTexto)}` : '');
-            setStatus(`Abriendo WhatsApp con ${nombreFinal}...`);
+            const numero = contactosWhatsapp[claveContacto];
+            const url = `https://wa.me/${numero}`;
+            setStatus(`Abriendo WhatsApp con ${claveContacto}...`);
+
             openAppBtn.href = url;
             openAppBtn.innerText = `Abrir chat de WhatsApp →`;
             openAppBtn.style.display = 'inline-block';
 
             let abierto = false;
-            if (window.OneiaNativo && OneiaNativo.abrirWhatsapp) {
-                abierto = OneiaNativo.abrirWhatsapp(numero, mensajeTexto || '') === 'ok';
-            } else {
-                try { const w = window.open(url, '_blank'); abierto = !!(w && !w.closed); } catch (e) { abierto = false; }
+            try {
+                const nuevaVentana = window.open(url, '_blank');
+                abierto = !!(nuevaVentana && !nuevaVentana.closed);
+            } catch (e) {
+                abierto = false;
             }
 
-            let explicacion;
-            if (!abierto) explicacion = `No pude abrir WhatsApp automáticamente. Toca el botón "Abrir chat de WhatsApp" para hablar con ${nombreFinal}.`;
-            else if (esLlamada) explicacion = `Abrí el chat de ${nombreFinal} en WhatsApp. Toca el ícono de llamada para llamarle: WhatsApp no permite iniciarla solo.`;
-            else if (mensajeTexto) explicacion = `Abrí el chat de ${nombreFinal} con tu mensaje escrito. Solo toca enviar: WhatsApp no deja que otra app lo mande sola.`;
-            else explicacion = `Abrí el chat de ${nombreFinal} en WhatsApp, listo para que escribas tu mensaje.`;
-            await responder(explicacion);
+            const explicacion = esLlamada
+                ? `Te dejé el chat de ${claveContacto} abierto en WhatsApp; por seguridad del navegador, el toque final en el ícono de llamada tienes que darlo tú.`
+                : `Te dejé el chat de ${claveContacto} abierto en WhatsApp, listo para que escribas y envíes tu mensaje.`;
+
+            agregarMensajeChat('assistant', explicacion);
+            if (!abierto) {
+                fileStatus.innerHTML = `El navegador bloqueó la apertura automática. Usa el botón "Abrir chat de WhatsApp" que aparece debajo del panel de adjuntos.`;
+            }
+            await hablar(explicacion);
+
+            estadoEscucha = 'DORMIDO';
+            setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
         }
 
         async function explicarLimitacionAlarma() {
@@ -3768,7 +4279,7 @@ while True:
         // usuario escribe su código de enlace en el panel para controlar su TV desde cualquier lugar.
         const TV_LOCAL_URL = 'http://localhost:8765';
         // Archivo del puente para Windows: súbelo junto a este HTML (o pon aquí su URL de descarga).
-        const TV_PUENTE_DESCARGA = 'ONEIACOOL-Puente-TV.exe';
+        const TV_PUENTE_DESCARGA = 'https://github.com/marioalfredobeltrantorres-debug/oneiacool-backend/releases/latest/download/ONEIACOOL-Puente-TV.exe';
         const TV_RELAY_URL = 'https://oneiacool-relay.onrender.com';
         let TV_CODIGO = '';
         try { TV_CODIGO = localStorage.getItem('oneia_tv_codigo') || ''; localStorage.removeItem('oneia_tv_puente'); } catch (e) {}
@@ -4013,15 +4524,10 @@ while True:
                 tvHabiaSinPuente = true;
                 tvEl('tvCodigoFila').style.display = 'none';
                 if (!tvModoNube()) {
-                    const win = /win/i.test(navigator.platform || navigator.userAgent);
-                    tvEl('tvInstalarBtn').href = TV_PUENTE_DESCARGA;
-                    fila.style.display = win ? 'flex' : 'none';
-                    cont.textContent = win ? '⚠ Falta instalar el puente de TV en esta computadora (se hace una sola vez).'
-                        : '⚠ No encuentro el puente de TV. En Mac/Linux ejecuta instalar-mac-linux.sh (carpeta agente) una sola vez.';
-                } else { fila.style.display = 'none'; cont.textContent = '⚠ ' + (r.error || 'No puedo comunicarme con tu puente.'); }
+                    cont.textContent = '⚠ Falta instalar el puente de TV en esta computadora (se hace una sola vez). Descárgalo abajo.';
+                } else { cont.textContent = '⚠ ' + (r.error || 'No puedo comunicarme con tu puente.'); }
                 return;
             }
-            fila.style.display = 'none';
             if (tvHabiaSinPuente) { tvHabiaSinPuente = false; if (r.estado !== 'conectado') tvPanelBuscar(); }   // recién instalado: sigue solo
             const marca = r.nombreMarca ? ` · ${r.nombreMarca}` : '';
             cont.textContent = `${r.estado === 'conectado' ? '🟢' : (r.estado === 'error' ? '🔴' : '🟡')} ${r.mensaje || r.estado}${marca}${r.ip ? ' · ' + r.ip : ''}`;
@@ -4286,7 +4792,7 @@ while True:
 
         async function intentarGenerarImagenNanoBanana(prompt) {
             if (!NANO_BANANA_API_KEY || NANO_BANANA_API_KEY.includes('PEGA_AQUI')) {
-                ultimosDiagnosticosImagen.push('Nano Banana: todavía no pegaste tu clave real de Gemini en NANO_BANANA_API_KEY (sigue con el texto de ejemplo ====PEGA_AQUI...====). Consíguela gratis en https://aistudio.google.com/apikey y pégala ahí.');
+                ultimosDiagnosticosImagen.push('Nano Banana: no hay clave guardada. Pégala en 🔑 API Key → Nano Banana (o Gemini). Consíguela en https://aistudio.google.com/apikey');
                 return null;
             }
             try {
@@ -4308,7 +4814,7 @@ while True:
                     try { motivo = JSON.parse(detalle)?.error?.message || detalle; } catch (e2) {}
                     let pista = '';
                     if (response.status === 400 && /api key not valid/i.test(motivo)) {
-                        pista = ' → Revisa que copiaste bien la clave completa desde https://aistudio.google.com/apikey (sin espacios extra) y que la pegaste en NANO_BANANA_API_KEY.';
+                        pista = ' → Revisa que copiaste bien la clave completa desde https://aistudio.google.com/apikey (sin espacios extra) y que la pegaste en 🔑 API Key → Nano Banana.';
                     }
                     ultimosDiagnosticosImagen.push(`Nano Banana: HTTP ${response.status} — ${(motivo || '').slice(0, 200)}${pista}`);
                     return null;
@@ -4349,7 +4855,7 @@ while True:
         // funcionaba. Esta es la URL nueva y correcta.
         async function intentarGenerarImagenHuggingFace(prompt) {
             if (!HUGGINGFACE_API_KEY || HUGGINGFACE_API_KEY.includes('PEGA_AQUI')) {
-                ultimosDiagnosticosImagen.push('Hugging Face: no has pegado tu token gratis en HUGGINGFACE_API_KEY. Créalo gratis (sin tarjeta) en https://huggingface.co/settings/tokens.');
+                ultimosDiagnosticosImagen.push('Hugging Face: no hay token guardado. Pégalo en 🔑 API Key → Hugging Face. Créalo gratis (sin tarjeta) en https://huggingface.co/settings/tokens.');
                 return null;
             }
             try {
@@ -4449,7 +4955,7 @@ while True:
                     clearTimeout(timer);
                     const pista = tieneClavePollinations
                         ? ''
-                        : ' Consigue una clave GRATIS en https://enter.pollinations.ai y pégala en POLLINATIONS_API_KEY: sin clave este dominio ya no es confiable.';
+                        : ' Consigue una clave GRATIS en https://enter.pollinations.ai y pégala en 🔑 API Key → Pollinations: sin clave este dominio ya no es confiable.';
                     ultimosDiagnosticosImagen.push(`Pollinations (${modelo}): el navegador no pudo cargar la imagen (el servicio no respondió o dio error).${pista}`);
                     reject(new Error('error de carga'));
                 };
@@ -4777,6 +5283,124 @@ while True:
             setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
         }
 
+        // ===== VARIAS IMÁGENES EN UN SOLO DOCUMENTO (PDF / Word / PowerPoint) =====
+        // Antes, si adjuntabas 2 o más imágenes y pedías "pégalas en un pdf",
+        // cada imagen se procesaba por separado y salía un documento por imagen.
+        // Ahora, si hay 2+ imágenes, se arma UN solo documento con todas, en el
+        // mismo orden en que se adjuntaron (una por página / diapositiva).
+        // También recuerda el último lote de imágenes para pedidos posteriores
+        // tipo "las quiero en un mismo pdf las dos imágenes que te di".
+        let ultimoLoteImagenes = [];
+
+        function detectarFormatoDocParaImagenes(texto, seguimiento) {
+            const n = normalizarTexto(texto || '');
+            let formato = null;
+            if (/\b(powerpoint|power point|pptx|presentacion|presentaciones|diapositiva|diapositivas)\b/.test(n)) formato = 'pptx';
+            else if (/\b(word|docx)\b/.test(n)) formato = 'word';
+            else if (/\bpdf\b/.test(n)) formato = 'pdf';
+            if (!formato) return null;
+            // Pedidos que NO son "juntar imágenes": análisis, ejercicios, cuestionarios...
+            if (/\b(resuelve\w*|resolver|explica\w*|describe\w*|analiza\w*|transcribe\w*|resume\w*|resumen|traduce\w*|extrae\w*|cuestionario)\b/.test(n)) return null;
+            try { if (detectarPedidoCuestionario(texto)) return null; } catch (e) {}
+            const verboFuerte = /\b(agrega\w*|mete\w*|pon\w*|pasa\w*|convierte\w*|incluye\w*|pega\w*|junta\w*|une\w*|unir\w*|combina\w*|compila\w*|ordena\w*)\b/.test(n);
+            const verboDebil = /\b(quiero|quisiera|necesito|ocupo|haz\w*|crea\w*|arma\w*|genera\w*|dame\w*)\b/.test(n);
+            const refImagenes = /\b(imagen|imagenes|foto|fotos|captura|capturas|ambas|ambos|las dos|los dos|las tres|los tres|ponlas|ponlos|pegalas|pegalos|metelas|metelos|juntalas|juntalos|unelas|unelos|pasalas|pasalos|mismo|mismas|mismos|un solo|una sola|orden)\b/.test(n);
+            if ((verboFuerte && (seguimiento ? refImagenes : true)) || (verboDebil && refImagenes)) return formato;
+            return null;
+        }
+
+        // Carga una imagen y la deja en PNG/JPEG (los únicos formatos que aceptan
+        // jsPDF y docx); cualquier otro (webp, gif, etc.) se convierte a PNG.
+        async function cargarImagenParaDocumento(file) {
+            let dataUrl = await fileToBase64(file);
+            const imgEl = new Image();
+            await new Promise((resolve, reject) => { imgEl.onload = resolve; imgEl.onerror = reject; imgEl.src = dataUrl; });
+            if (!/^data:image\/(png|jpe?g)/i.test(dataUrl)) {
+                const c = document.createElement('canvas');
+                c.width = imgEl.naturalWidth || imgEl.width; c.height = imgEl.naturalHeight || imgEl.height;
+                c.getContext('2d').drawImage(imgEl, 0, 0);
+                dataUrl = c.toDataURL('image/png');
+            }
+            const esPng = /^data:image\/png/i.test(dataUrl);
+            return { dataUrl, formato: esPng ? 'PNG' : 'JPEG', tipo: esPng ? 'png' : 'jpg', w: imgEl.naturalWidth || imgEl.width, h: imgEl.naturalHeight || imgEl.height };
+        }
+
+        async function crearDocumentoDesdeImagenes(files, formato) {
+            const nombres = { pdf: 'PDF', word: 'documento de Word', pptx: 'presentación de PowerPoint' };
+            const extension = { pdf: 'pdf', word: 'docx', pptx: 'pptx' }[formato];
+            const boton = { pdf: 'Descargar PDF', word: 'Descargar Word', pptx: 'Descargar PowerPoint' }[formato];
+            setStatus(`Metiendo tus ${files.length} imágenes, en orden, en un solo ${nombres[formato]}...`);
+            try {
+                // Se cargan en orden (una tras otra) para respetar la secuencia.
+                const imagenes = [];
+                for (const f of files) imagenes.push(await cargarImagenParaDocumento(f));
+
+                let blob;
+                if (formato === 'pdf') {
+                    if (!window.jspdf) throw new Error('la librería de PDF no se cargó, revisa tu conexión a internet');
+                    const { jsPDF } = window.jspdf;
+                    let doc = null;
+                    imagenes.forEach((im, i) => {
+                        const orient = im.w >= im.h ? 'landscape' : 'portrait';
+                        if (!doc) doc = new jsPDF({ orientation: orient, unit: 'pt' });
+                        else doc.addPage('a4', orient);
+                        const pw = doc.internal.pageSize.getWidth();
+                        const ph = doc.internal.pageSize.getHeight();
+                        const margen = 24;
+                        const escala = Math.min((pw - margen * 2) / im.w, (ph - margen * 2) / im.h);
+                        const wf = im.w * escala, hf = im.h * escala;
+                        doc.addImage(im.dataUrl, im.formato, (pw - wf) / 2, (ph - hf) / 2, wf, hf);
+                    });
+                    blob = doc.output('blob');
+                } else if (formato === 'word') {
+                    if (typeof docx === 'undefined') throw new Error('la librería de Word no se cargó, revisa tu conexión a internet');
+                    const { Document, Packer, Paragraph, ImageRun, AlignmentType } = docx;
+                    const hijos = imagenes.map((im, i) => {
+                        const escala = Math.min(580 / im.w, 700 / im.h, 1);
+                        return new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            pageBreakBefore: i > 0, // cada imagen en su propia página, en orden
+                            children: [new ImageRun({
+                                type: im.tipo,
+                                data: dataUrlABytes(im.dataUrl),
+                                transformation: { width: Math.round(im.w * escala), height: Math.round(im.h * escala) }
+                            })]
+                        });
+                    });
+                    blob = await Packer.toBlob(new Document({ sections: [{ properties: {}, children: hijos }] }));
+                } else {
+                    if (typeof PptxGenJS === 'undefined') throw new Error('la librería de PowerPoint no se cargó, revisa tu conexión a internet');
+                    const pptx = new PptxGenJS();
+                    pptx.defineLayout({ name: 'ONEIA_LAYOUT', width: 10, height: 5.63 });
+                    pptx.layout = 'ONEIA_LAYOUT';
+                    imagenes.forEach((im) => {
+                        const slide = pptx.addSlide();
+                        slide.background = { color: "0A0A1A" };
+                        const relacion = im.w / im.h;
+                        let w = 9, h = w / relacion;
+                        if (h > 5) { h = 5; w = h * relacion; }
+                        slide.addImage({ data: im.dataUrl, x: (10 - w) / 2, y: (5.63 - h) / 2, w, h });
+                    });
+                    blob = await pptx.write({ outputType: 'blob' });
+                }
+
+                const blobUrl = URL.createObjectURL(blob);
+                const nombreArchivo = `${IA_NAME_ESCRITO}_${files.length}_imagenes.${extension}`;
+                mediaResult.innerHTML = `
+                    <p style="font-size:0.8rem;">Tu ${nombres[formato]} con las ${files.length} imágenes (en orden) está listo, sin marca de agua.</p>
+                    <a class="download-link" href="${blobUrl}" download="${nombreArchivo}">⬇ ${boton} →</a>
+                `;
+                mediaResult.style.display = 'block';
+                agregarMensajeChat('assistant', `Metí tus ${files.length} imágenes, en el mismo orden en que me las diste, en un solo ${nombres[formato]}. Descárgalo con el botón arriba del chat, sin ninguna marca de agua.`);
+                await hablar(`Listo, metí tus ${files.length} imágenes en orden dentro de un solo ${nombres[formato]}. Descárgalo con el botón en pantalla.`);
+            } catch (e) {
+                setStatus(`No pude juntar las imágenes (${e && e.message ? e.message : e}).`, true);
+                agregarMensajeChat('assistant', 'No pude juntar esas imágenes en un solo documento. Revisa que todos sean archivos de imagen válidos.');
+            }
+            estadoEscucha = 'DORMIDO';
+            setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+        }
+
         // --- Modificación real de un PDF ya existente: solo se activa cuando
         // el usuario pide explícitamente una edición (por ejemplo una marca de
         // agua, firma o sello). Ya NO se aplica automáticamente ninguna marca
@@ -4850,6 +5474,7 @@ while True:
             "8) Cantidad: usa muchos elementos (cientos o miles de partículas en canvas) y el código debe ser detallado (mínimo unas 120 líneas), sin dejar partes con 'TODO' ni comentarios de relleno.\n" +
             "9) 'GIRO 360°' (o 'gira', 'rotación', 'vista 360', 'girar en todas direcciones'): significa ROTACIÓN 3D REAL, NUNCA un simple giro plano en 2D alrededor del centro de la pantalla. Guarda cada elemento como punto 3D (x,y,z); una galaxia es un disco con espesor (y pequeño y aleatorio) más un bulbo central. Cada fotograma: rota los puntos con yaw (alrededor de Y) y pitch (alrededor de X) usando seno/coseno, proyecta con perspectiva (k = fov/(fov+z), x2d = cx + x*k*escala) y ORDENA por profundidad (los lejanos primero) escalando tamaño y opacidad según k. La cámara orbita dando la vuelta COMPLETA de 360° (yaw avanza sin parar) mientras el pitch oscila suave para verla desde arriba, de lado y por debajo. Añade: arrastrar con mouse/dedo para girar libremente en todas direcciones con inercia, rueda o pellizco para zoom, espacio o doble clic para pausar el giro automático, y un texto de ayuda pequeño y discreto.\n" +
             "10) NIVEL DE DETALLE (siempre, aunque no lo pidan): mínimo 2500 elementos principales repartidos en capas: nebulosa/polvo suave siguiendo los brazos, estrellas lejanas con parpadeo, miles de flores con al menos 4 variantes de sprite (dos capas de pétalos con curvas bezier, nervadura, estambres, centro con degradado y halo), núcleo muy brillante y bulbo central. Variación real de tamaño, tono y opacidad, pulso suave y giro propio de cada flor. No satures de blanco: usa 'lighter' solo para polvo, estrellas y brillo, y dibuja las flores con mezcla normal para que se vean sus pétalos. Mantén 60 FPS: sprites pre-renderizados, sin crear objetos ni gradientes dentro del bucle.\n" +
+            "11) NITIDEZ OBLIGATORIA (el fallo más común es que salga borroso o pixelado): (a) canvas en ALTA RESOLUCIÓN: usa SIEMPRE esta función y llámala al inicio y en 'resize': function fit(){var d=Math.min(window.devicePixelRatio||1,3);W=innerWidth;H=innerHeight;cv.width=Math.round(W*d);cv.height=Math.round(H*d);cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(d,0,0,d,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';} y dibuja siempre en coordenadas CSS (W x H). (b) Sprites pre-renderizados: dibújalos en un canvas oculto al DOBLE o TRIPLE del tamaño máximo con el que se verán (mínimo 128 px los grandes) y redúcelos al dibujar; NUNCA amplíes un sprite pequeño. (c) Estrellas y partículas pequeñas: NÍTIDAS, con núcleo sólido y borde definido (arc de 0.6 a 2 px o fillRect), sin halos enormes; el brillo suave solo para el núcleo, unas pocas estrellas brillantes y una nebulosa muy tenue (opacidad menor a 0.15). (d) PROHIBIDO: filter:blur(), shadowBlur dentro de bucles, gradientes radiales gigantes para todas las partículas y capas 'lighter' que acumulen blanco. (e) Líneas y formas vectoriales con lineWidth definido y coordenadas .5 para que queden finas y limpias; para diagramas y figuras geométricas usa SVG inline en vez de canvas. (f) Texto con font-family system-ui, sans-serif y tamaños enteros. (g) Pétalos, bordes y figuras con contorno fino y un segundo tono más oscuro para dar definición, nunca manchas difusas. (h) Paleta armoniosa de 4 a 6 colores con buen contraste sobre fondo oscuro, nada de colores lavados.\n" +
             "Respeta exactamente lo que pide el usuario (tema, colores, giro, etc.).";
 
         function promptCodigoScript(nombreLenguaje) {
@@ -4998,6 +5623,7 @@ while True:
         function notasExtraCodigoHTML(desc) {
             const d = (desc || '').toLowerCase();
             const notas = [];
+            notas.push("Prioriza la NITIDEZ: canvas en alta resolución (devicePixelRatio), partículas pequeñas y bien definidas, sin manchas borrosas ni halos enormes, colores vivos y bordes limpios.");
             if (/360|gir|rota|rotaci/.test(d)) notas.push("Cuando digo giro/rotación 360° quiero una vista 3D REAL: la cámara debe dar la vuelta completa alrededor del objeto y verse desde arriba, de lado y por debajo (yaw + pitch con perspectiva), y poder arrastrar con el mouse para girarlo en todas direcciones. NO quiero solo un giro plano en 2D.");
             if (/detall|extens|grande|muchas|bonit|bnit|hermos|lind|cool|mejor/.test(d)) notas.push("Hazlo MUY detallado: miles de elementos en capas (polvo, estrellas, flores con pétalos y estambres, núcleo brillante), variedad de tamaños y tonos, y muy bonito visualmente.");
             return notas.length ? "\n\nAclaraciones importantes: " + notas.join(" ") : "";
@@ -5007,7 +5633,7 @@ while True:
             setStatus(`Generando código HTML para "${descripcion}"...`);
 
             // crudo: NO borrar *, \, $ ni _ del código. Modelo grande + esfuerzo alto = código mucho mejor.
-            const opcionesCodigo = { crudo: true, maxTokens: 16000, esfuerzo: "medium", temperatura: 0.7,
+            const opcionesCodigo = { crudo: true, maxTokens: 16000, esfuerzo: "medium", temperatura: 0.6,
                                      modelos: ["openai/gpt-oss-120b", "openai/gpt-oss-20b"] };
 
             const mensajes = [
@@ -6637,6 +7263,965 @@ while True:
             terminarDocumento();
         }
 
+
+        // =====================================================================
+        //  CUESTIONARIOS / CUADROS EN WORD (fix: "dame un word con 10 preguntas
+        //  de si o no como un cuadro similar al de la imagen")
+        //  Antes: con una imagen adjunta, la orden iba SIEMPRE al modelo de
+        //  visión (analizarImagen), que no sabe que la app crea Word, y
+        //  respondía "no puedo generar archivos de Word". Y sin imagen, el
+        //  motor de Word solo sabía hacer informes genéricos, no tablas.
+        // =====================================================================
+        function detectarPedidoCuestionario(texto) {
+            const n = normalizarPedidoDoc(texto || '');
+            if (!/\b(word|docx)\b/.test(n)) return false;
+            // Preguntas sobre Word ("qué es Word", "cómo abro Word") no son pedidos de archivo.
+            if (/^(?:que es|que son|como (?:abro|uso|se usa|instalo|descargo)|para que sirve|donde (?:esta|queda))\b/.test(n)) return false;
+            // Abrir la app de Word no es crear un cuestionario.
+            if (/\b(abre|abrir|abreme)\b/.test(n) && !/\bpreguntas?\b/.test(n)) return false;
+            const tieneTipo = /\b(preguntas?|cuestionario|encuesta|cuadro|tabla|si o no|verdadero o falso|ficha|lista de cotejo|rubrica|items?|reactivos?)\b/.test(n);
+            if (!tieneTipo) return false;
+            // Señales de que quiere un ARCHIVO aunque no use un verbo típico:
+            // "10 preguntas en word", "un word con preguntas", "preguntas en un word".
+            const cantidadYPreguntas = /\b(\d{1,2}|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|doce|quince|veinte)\s+(?:\w+\s+)?preguntas?\b/.test(n);
+            const formatoArchivo = /\b(en|un|una|con|como|formato|archivo|documento)\s+(?:de\s+)?(word|docx)\b/.test(n);
+            return pideDocumento(n) || cantidadYPreguntas || formatoArchivo;
+        }
+
+        // Le pide al modelo de visión una descripción CORTA de la estructura
+        // del cuadro de la imagen (columnas, encabezados, estilo de ítems).
+        async function describirEstructuraImagen(dataUrl) {
+            try {
+                const resp = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${groqApiKey}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        model: VISION_MODEL,
+                        messages: [
+                            { role: "system", content: "Describe en español, en máximo 80 palabras, la ESTRUCTURA del cuadro, tabla o esquema de la imagen: nombres de las columnas o encabezados (por ejemplo Variable, Indicadores, Ítem), cómo se agrupan las filas y qué tipo de pregunta o ítem contiene. No resuelvas nada, solo describe la estructura." },
+                            { role: "user", content: [
+                                { type: "text", text: "¿Qué estructura tiene este cuadro?" },
+                                { type: "image_url", image_url: { url: dataUrl } }
+                            ] }
+                        ],
+                        temperature: 0.2,
+                        max_tokens: 400,
+                        reasoning_format: "hidden"
+                    })
+                });
+                if (!resp.ok) { if (resp.status === 401) olvidarGroqKeyInvalida(); return ''; }
+                const d = await resp.json();
+                return limpiarPensamiento(d.choices?.[0]?.message?.content || '').slice(0, 900);
+            } catch (e) { return ''; }
+        }
+
+        function construirWordCuestionario(datos) {
+            const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, BorderStyle, ShadingType, VerticalAlign, PageOrientation } = docx;
+            const opciones = (Array.isArray(datos.opciones) && datos.opciones.length >= 2 ? datos.opciones : ['Sí', 'No']).slice(0, 3).map(String);
+            const grupos = (datos.grupos || []).map(g => ({
+                indicador: String(g.indicador || ''),
+                items: comoLista(g.items)
+            })).filter(g => g.items.length);
+            const totalItems = grupos.reduce((a, g) => a + g.items.length, 0);
+
+            const colOpc = 1100;
+            const anchos = [2000, 2400, 13680 - 2000 - 2400 - colOpc * opciones.length, ...opciones.map(() => colOpc)];
+            const total = anchos.reduce((a, b) => a + b, 0);
+            const borde = { style: BorderStyle.SINGLE, size: 6, color: "555555" };
+            const bordes = { top: borde, bottom: borde, left: borde, right: borde };
+
+            const celda = (texto, w, o = {}) => new TableCell({
+                width: { size: w, type: WidthType.DXA },
+                borders: bordes,
+                verticalAlign: VerticalAlign.CENTER,
+                rowSpan: o.rowSpan,
+                shading: o.fill ? { type: ShadingType.CLEAR, fill: o.fill, color: "auto" } : undefined,
+                margins: { top: 80, bottom: 80, left: 120, right: 120 },
+                children: [new Paragraph({
+                    alignment: o.centro ? AlignmentType.CENTER : AlignmentType.LEFT,
+                    children: [new TextRun({ text: String(texto || ''), bold: !!o.negrita, size: 22, font: "Arial" })]
+                })]
+            });
+
+            const encabezados = ["Variable", "Indicadores", "Ítem (pregunta)", ...opciones];
+            const filas = [new TableRow({
+                tableHeader: true,
+                children: encabezados.map((t, i) => celda(t, anchos[i], { negrita: true, fill: "D9E2F3", centro: true }))
+            })];
+
+            let n = 1, primera = true;
+            for (const g of grupos) {
+                g.items.forEach((q, i) => {
+                    const celdas = [];
+                    if (primera) { celdas.push(celda(datos.variable || 'Variable', anchos[0], { rowSpan: totalItems, negrita: true, centro: true, fill: "F2F2F2" })); primera = false; }
+                    if (i === 0) celdas.push(celda(g.indicador, anchos[1], { rowSpan: g.items.length, negrita: true, centro: true, fill: "F2F2F2" }));
+                    celdas.push(celda(`${n}. ${q}`, anchos[2]));
+                    opciones.forEach((_, k) => celdas.push(celda('', anchos[3 + k])));
+                    filas.push(new TableRow({ children: celdas }));
+                    n++;
+                });
+            }
+
+            return new Document({
+                sections: [{
+                    properties: { page: {
+                        size: { width: 12240, height: 15840, orientation: PageOrientation.LANDSCAPE },
+                        margin: { top: 1080, bottom: 1080, left: 1080, right: 1080 } } },
+                    children: [
+                        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 },
+                            children: [new TextRun({ text: datos.titulo || 'Cuestionario', bold: true, size: 32, font: "Arial" })] }),
+                        new Paragraph({ spacing: { after: 240 },
+                            children: [new TextRun({ text: datos.instrucciones || `Instrucciones: marca con una X la opción que corresponda (${opciones.join(' o ')}).`, italics: true, size: 22, font: "Arial" })] }),
+                        new Table({ width: { size: total, type: WidthType.DXA }, columnWidths: anchos, rows: filas }),
+                        new Paragraph({ spacing: { before: 240 },
+                            children: [new TextRun({ text: "Nombre: ______________________________     Fecha: ______________", size: 22, font: "Arial" })] })
+                    ]
+                }]
+            });
+        }
+
+        async function generarWordCuestionario(comando, file = null) {
+            setStatus('Preparando tu cuestionario en Word...');
+            let estructura = '';
+            let dataUrl = null;
+            if (file) {
+                dataUrl = await fileToBase64(file);
+                setStatus('Leyendo la estructura del cuadro de tu imagen...');
+                estructura = await describirEstructuraImagen(dataUrl);
+            }
+
+            const sistema =
+                'Eres un diseñador de instrumentos escolares (cuestionarios, cuadros de operacionalización, fichas). ' +
+                'Responde ÚNICAMENTE con un JSON válido, sin markdown ni texto extra, con este formato exacto: ' +
+                '{"titulo":"Título del cuestionario","variable":"Nombre de la variable","instrucciones":"Instrucción breve para quien responde","opciones":["Sí","No"],' +
+                '"grupos":[{"indicador":"Nombre del indicador","items":["¿Pregunta 1?","¿Pregunta 2?"]}]}. ' +
+                'Reglas: respeta EXACTAMENTE la cantidad de preguntas que pide el usuario (si pide 10, en total 10 ítems entre todos los grupos); ' +
+                'agrupa los ítems en 3 o 4 indicadores coherentes con el tema; si piden respuestas de sí o no usa opciones ["Sí","No"], si piden verdadero o falso usa ["Verdadero","Falso"]; ' +
+                'redacta cada ítem como una pregunta cerrada clara que se pueda responder con esas opciones; todo en español correcto con tildes; sin LaTeX ni markdown.' +
+                (estructura ? ' El usuario adjuntó una imagen de un cuadro de referencia; imita su organización (columnas Variable, Indicadores e Ítem si aparecen). Descripción de la imagen: ' + estructura : '');
+
+            const r = await pedirJSONaIA([
+                { role: 'system', content: sistema },
+                { role: 'user', content: comando }
+            ], { maxTokens: 3000 });
+
+            if (r.error || !r.datos || !Array.isArray(r.datos.grupos)) {
+                await falloDocumento(`No pude estructurar el cuestionario (${r.error || 'respuesta inesperada'}). Intenta de nuevo.`);
+                return terminarDocumento();
+            }
+
+            try {
+                if (typeof docx === 'undefined') throw new Error('la librería de Word no se cargó, revisa tu conexión a internet');
+                const doc = construirWordCuestionario(r.datos);
+                const blob = await docx.Packer.toBlob(doc);
+                const tema = r.datos.variable || r.datos.titulo || 'cuestionario';
+                ultimoTemaDocumento = tema;
+                if (dataUrl) agregarMensajeChat('user', `[Imagen: ${file.name}]`, { imagenDataUrl: dataUrl, omitirMemoria: true });
+                await entregarDocumento({ blob, nombreArchivo: `${IA_NAME_ESCRITO}_${slugArchivo(tema)}.docx`, boton: 'Descargar Word', titulo: r.datos.titulo || 'Cuestionario', nombreTipo: 'documento de Word', pedido: { tabla: null }, tema });
+            } catch (e) {
+                await falloDocumento(`No pude generar el archivo de Word (${e && e.message ? e.message : e}). Intenta de nuevo.`);
+            }
+            terminarDocumento();
+        }
+
+
+        // =====================================================================
+        //  GRÁFICAS MATEMÁTICAS
+        //  "grafica y = x^2 - 4", "gráfica de seno y coseno", "grafícame
+        //  r = 2cos(3θ)", "x^2 + y^2 = 25", "z = sin(x)*cos(y)"...
+        //  No usa eval ni código generado por la IA: la IA (o un lector local)
+        //  solo produce una descripción (JSON) y esta app la dibuja con su
+        //  propio analizador de expresiones, en un canvas de alta resolución
+        //  (nítido), con ejes, cuadrícula, zoom, arrastre y descarga en PNG.
+        // =====================================================================
+        const GM_COLORES = ['#00e5ff', '#ff6b6b', '#ffd166', '#7cff6b', '#c792ff', '#ff9f43'];
+
+        function gmPow(a, b) {
+            if (a < 0 && !Number.isInteger(b)) {
+                // raíces impares reales: (-8)^(1/3) = -2, (-8)^(2/3) = 4
+                for (let q = 3; q <= 15; q += 2) {
+                    const num = b * q;
+                    if (Math.abs(num - Math.round(num)) < 1e-9) {
+                        const mag = Math.pow(-a, b);
+                        return Math.round(num) % 2 === 0 ? mag : -mag;
+                    }
+                }
+                return NaN;
+            }
+            return Math.pow(a, b);
+        }
+
+        const GM_FUNCIONES = {
+            sin: Math.sin, cos: Math.cos, tan: Math.tan,
+            asin: Math.asin, acos: Math.acos, atan: Math.atan, atan2: Math.atan2,
+            sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh,
+            exp: Math.exp, ln: Math.log, log: Math.log10, log10: Math.log10, log2: Math.log2,
+            sqrt: Math.sqrt, cbrt: Math.cbrt, abs: Math.abs,
+            floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign,
+            sec: v => 1 / Math.cos(v), csc: v => 1 / Math.sin(v), cot: v => 1 / Math.tan(v),
+            min: Math.min, max: Math.max, pow: gmPow
+        };
+        const GM_CONSTANTES = { pi: Math.PI, e: Math.E, tau: 2 * Math.PI };
+
+        function gmNormalizarExpr(entrada) {
+            let s = String(entrada == null ? '' : entrada).toLowerCase()
+                .replace(/[−–—]/g, '-').replace(/[×·⋅]/g, '*').replace(/÷/g, '/')
+                .replace(/π/g, 'pi').replace(/θ/g, 't').replace(/\btheta\b/g, 't')
+                .replace(/√\s*\(/g, 'sqrt(').replace(/√\s*([a-z0-9.]+)/g, 'sqrt($1)')
+                .replace(/\*\*/g, '^').replace(/²/g, '^2').replace(/³/g, '^3')
+                .replace(/\bsenh\b/g, 'sinh').replace(/\bsen\b/g, 'sin').replace(/\btg\b/g, 'tan')
+                .replace(/\b(?:arcsin|arcsen|asen)\b/g, 'asin').replace(/\barccos\b/g, 'acos').replace(/\b(?:arctan|arctg)\b/g, 'atan')
+                .replace(/\s+/g, ' ').trim();
+            if (!/\b(atan2|min|max|pow)\b/.test(s)) s = s.replace(/(\d),(\d)/g, '$1.$2'); // decimales con coma
+            return s;
+        }
+
+        function gmTokenizar(s, vars) {
+            const permitidas = ['x', 'y', 't'];
+            const conocidos = Object.keys(GM_FUNCIONES).concat(Object.keys(GM_CONSTANTES), permitidas);
+            conocidos.sort((a, b) => b.length - a.length);
+            const toks = [];
+            let i = 0;
+            while (i < s.length) {
+                const c = s[i];
+                if (c === ' ') { i++; continue; }
+                const resto = s.slice(i);
+                let m = /^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/.exec(resto);
+                if (m) { toks.push({ k: 'n', v: parseFloat(m[0]) }); i += m[0].length; continue; }
+                if ('+-*/^(),'.includes(c)) { toks.push({ k: 'o', v: c }); i++; continue; }
+                const nombre = conocidos.find(n => resto.startsWith(n));
+                if (nombre) {
+                    if (GM_FUNCIONES[nombre]) toks.push({ k: 'f', v: nombre });
+                    else if (nombre in GM_CONSTANTES) toks.push({ k: 'c', v: GM_CONSTANTES[nombre] });
+                    else if (vars.includes(nombre)) toks.push({ k: 'v', v: nombre });
+                    else throw new Error(`aquí no se puede usar "${nombre}"` + (vars.length ? ` (la variable es ${vars.join(' y ')})` : ''));
+                    i += nombre.length; continue;
+                }
+                const palabra = (/^[a-z_áéíóúñ]+/.exec(resto) || [c])[0];
+                throw new Error(`no reconozco "${palabra}"`);
+            }
+            return toks;
+        }
+
+        // Analizador recursivo: devuelve una función (x, y, t) => número.
+        function gmCompilar(expr, vars = ['x']) {
+            const s = gmNormalizarExpr(expr);
+            if (!s) throw new Error('expresión vacía');
+            const toks = gmTokenizar(s, vars);
+            let p = 0;
+            const esOp = v => toks[p] && toks[p].k === 'o' && toks[p].v === v;
+            const empiezaPrimario = () => toks[p] && (toks[p].k === 'n' || toks[p].k === 'f' || toks[p].k === 'c' || toks[p].k === 'v' || (toks[p].k === 'o' && toks[p].v === '('));
+
+            function suma() {
+                let a = producto();
+                while (esOp('+') || esOp('-')) {
+                    const op = toks[p++].v; const l = a; const r = producto();
+                    a = op === '+' ? (x, y, t) => l(x, y, t) + r(x, y, t) : (x, y, t) => l(x, y, t) - r(x, y, t);
+                }
+                return a;
+            }
+            function producto() {
+                let a = unario();
+                for (;;) {
+                    if (esOp('*') || esOp('/')) {
+                        const op = toks[p++].v; const l = a; const r = unario();
+                        a = op === '*' ? (x, y, t) => l(x, y, t) * r(x, y, t) : (x, y, t) => l(x, y, t) / r(x, y, t);
+                    } else if (empiezaPrimario()) {          // multiplicación implícita: 2x, 3sin(x), (x+1)(x-1)
+                        const l = a; const r = unario();
+                        a = (x, y, t) => l(x, y, t) * r(x, y, t);
+                    } else break;
+                }
+                return a;
+            }
+            function unario() {
+                if (esOp('-')) { p++; const a = unario(); return (x, y, t) => -a(x, y, t); }
+                if (esOp('+')) { p++; return unario(); }
+                return potencia();
+            }
+            function potencia() {
+                const base = primario();
+                if (esOp('^')) { p++; const ex = unario(); return (x, y, t) => gmPow(base(x, y, t), ex(x, y, t)); }
+                return base;
+            }
+            function primario() {
+                const tk = toks[p++];
+                if (!tk) throw new Error('la expresión está incompleta');
+                if (tk.k === 'n' || tk.k === 'c') { const v = tk.v; return () => v; }
+                if (tk.k === 'v') return tk.v === 'x' ? (x) => x : tk.v === 'y' ? (x, y) => y : (x, y, t) => t;
+                if (tk.k === 'o' && tk.v === '(') {
+                    const e = suma();
+                    if (!esOp(')')) throw new Error('falta cerrar un paréntesis');
+                    p++; return e;
+                }
+                if (tk.k === 'f') {
+                    const fn = GM_FUNCIONES[tk.v];
+                    const args = [];
+                    if (esOp('(')) {
+                        p++;
+                        if (!esOp(')')) { args.push(suma()); while (esOp(',')) { p++; args.push(suma()); } }
+                        if (!esOp(')')) throw new Error('falta cerrar un paréntesis');
+                        p++;
+                    } else {
+                        args.push(potencia());               // "sin x", "sqrt x"
+                    }
+                    if (args.length === 1) { const a0 = args[0]; return (x, y, t) => fn(a0(x, y, t)); }
+                    return (x, y, t) => fn(...args.map(a => a(x, y, t)));
+                }
+                throw new Error(`símbolo inesperado "${tk.v}"`);
+            }
+
+            const f = suma();
+            if (p < toks.length) throw new Error(`no entendí "${toks[p].v}"`);
+            return f;
+        }
+
+        function gmNum(v, def) {
+            if (typeof v === 'number' && isFinite(v)) return v;
+            if (typeof v === 'string' && v.trim()) { try { const r = gmCompilar(v, [])(0, 0, 0); if (isFinite(r)) return r; } catch (e) {} }
+            return def;
+        }
+
+        function gmRango(par) {
+            if (!Array.isArray(par) || par.length < 2) return null;
+            const a = gmNum(par[0], null), b = gmNum(par[1], null);
+            return (a !== null && b !== null && a < b) ? [a, b] : null;
+        }
+
+        // Valida y compila lo que describió la IA (o el lector local).
+        function gmNormalizarSpec(raw) {
+            if (!raw || typeof raw !== 'object') throw new Error('no recibí una descripción de la gráfica');
+            let tipo = String(raw.tipo || 'cartesiana').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            tipo = /param/.test(tipo) ? 'parametrica' : /impl/.test(tipo) ? 'implicita' : /super|3d|surface/.test(tipo) ? 'superficie' : /polar/.test(tipo) ? 'polar' : 'cartesiana';
+            const crudas = Array.isArray(raw.curvas) ? raw.curvas : [];
+            if (!crudas.length) throw new Error('no encontré ninguna función para graficar');
+            const vars = tipo === 'cartesiana' ? ['x'] : (tipo === 'polar' || tipo === 'parametrica') ? ['t'] : ['x', 'y'];
+            const curvas = [];
+            crudas.slice(0, 6).forEach((c, i) => {
+                const color = GM_COLORES[i % GM_COLORES.length];
+                const etiqueta = String(c.etiqueta || '').trim();
+                if (tipo === 'parametrica') {
+                    const ex = String(c.xexpr ?? c.x ?? ''), ey = String(c.yexpr ?? c.y ?? '');
+                    curvas.push({ fx: gmCompilar(ex, ['t']), fy: gmCompilar(ey, ['t']), etiqueta: etiqueta || `(${ex}, ${ey})`, color });
+                    return;
+                }
+                let e = String(c.expr ?? c.expresion ?? c.funcion ?? '').trim();
+                if (!e) throw new Error('una de las funciones llegó vacía');
+                let fn;
+                if (tipo === 'implicita') {
+                    const partes = e.split('=');
+                    if (partes.length === 2) e = `(${partes[0]})-(${partes[1]})`;
+                    else if (partes.length > 2) throw new Error('la ecuación tiene más de un signo =');
+                    fn = gmCompilar(e, ['x', 'y']);
+                } else {
+                    e = e.replace(/^\s*(?:y|f\s*\(\s*x\s*\)|g\s*\(\s*x\s*\)|r|r\s*\(\s*(?:t|θ)\s*\)|z)\s*=\s*/i, '');
+                    fn = gmCompilar(e, vars);
+                }
+                const nombre = etiqueta || (tipo === 'polar' ? `r = ${e}` : tipo === 'superficie' ? `z = ${e}` : tipo === 'implicita' ? String(c.expr) : `y = ${e}`);
+                curvas.push({ fn, expr: e, etiqueta: nombre, color });
+            });
+            const todas = crudas.map(c => `${c.expr || ''} ${c.xexpr || ''} ${c.yexpr || ''}`).join(' ').toLowerCase();
+            const usaPi = tipo === 'cartesiana' && /\b(sin|sen|cos|tan|sec|csc|cot)\b/.test(todas);
+            return {
+                tipo, curvas, usaPi,
+                titulo: String(raw.titulo || 'Gráfica'),
+                x: gmRango(raw.x), y: gmRango(raw.y),
+                t: gmRango(raw.t) || [0, 2 * Math.PI]
+            };
+        }
+
+        // ---------- Ayudas de escala y formato ----------
+        function gmPasoBonito(rango, objetivo) {
+            const crudo = rango / Math.max(2, objetivo);
+            const mag = Math.pow(10, Math.floor(Math.log10(crudo)));
+            const r = crudo / mag;
+            return (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag;
+        }
+        function gmPasoPi(rango) {
+            const cand = [1 / 12, 1 / 6, 1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4, 6, 8, 12, 24];
+            for (const c of cand) if (rango / (c * Math.PI) <= 11) return c * Math.PI;
+            return 24 * Math.PI;
+        }
+        function gmFmt(v) {
+            if (Math.abs(v) < 1e-10) return '0';
+            const a = Math.abs(v);
+            if (a >= 1e6 || a < 1e-4) return v.toExponential(1).replace('e+', 'e');
+            return String(parseFloat(v.toPrecision(6))).replace('-', '−');
+        }
+        function gmFmtPi(v) {
+            if (Math.abs(v) < 1e-10) return '0';
+            const q = v / Math.PI;
+            for (const d of [1, 2, 3, 4, 6, 8, 12]) {
+                const n = q * d;
+                if (Math.abs(n - Math.round(n)) < 1e-6) {
+                    let num = Math.round(n);
+                    const signo = num < 0 ? '−' : '';
+                    num = Math.abs(num);
+                    const cuerpo = num === 1 ? 'π' : `${num}π`;
+                    return d === 1 ? `${signo}${cuerpo}` : `${signo}${cuerpo}/${d}`;
+                }
+            }
+            return gmFmt(v);
+        }
+
+        function gmAutoY(curvas, xmin, xmax) {
+            const ys = [];
+            const N = 700;
+            curvas.forEach(c => { for (let i = 0; i <= N; i++) { const y = c.fn(xmin + (xmax - xmin) * i / N); if (isFinite(y) && Math.abs(y) < 1e9) ys.push(y); } });
+            if (!ys.length) return [-10, 10];
+            ys.sort((a, b) => a - b);
+            let a = ys[Math.floor(ys.length * 0.02)], b = ys[Math.min(ys.length - 1, Math.ceil(ys.length * 0.98))];
+            if (!(b - a > 1e-9)) { a -= 1; b += 1; }
+            const pad = (b - a) * 0.12;
+            a -= pad; b += pad;
+            if (a > 0 && a < b * 0.6) a = -b * 0.08;
+            if (b < 0 && b > a * 0.6) b = -a * 0.08;
+            return [a, b];
+        }
+
+        function gmMuestrasParametricas(c, tipo, t0, t1, N) {
+            const pts = [];
+            for (let i = 0; i <= N; i++) {
+                const t = t0 + (t1 - t0) * i / N;
+                let x, y;
+                if (tipo === 'polar') { const r = c.fn(0, 0, t); x = r * Math.cos(t); y = r * Math.sin(t); }
+                else { x = c.fx(0, 0, t); y = c.fy(0, 0, t); }
+                pts.push(isFinite(x) && isFinite(y) && Math.abs(x) < 1e7 && Math.abs(y) < 1e7 ? [x, y] : null);
+            }
+            return pts;
+        }
+
+        // Vista inicial (ventana de coordenadas) según el tipo de gráfica.
+        function gmVistaInicial(spec, W, H) {
+            const asp = H / W;
+            if (spec.tipo === 'cartesiana') {
+                const xr = spec.x || (spec.usaPi ? [-2 * Math.PI, 2 * Math.PI] : [-10, 10]);
+                const yr = spec.y || gmAutoY(spec.curvas, xr[0], xr[1]);
+                return { xmin: xr[0], xmax: xr[1], ymin: yr[0], ymax: yr[1] };
+            }
+            let xr = spec.x, yr = spec.y;
+            if (!xr || !yr) {
+                if (spec.tipo === 'implicita') {
+                    xr = xr || [-10, 10];
+                    const mid = 0, semi = (xr[1] - xr[0]) / 2 * asp;
+                    yr = yr || [mid - semi, mid + semi];
+                } else {
+                    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+                    spec.curvas.forEach(c => gmMuestrasParametricas(c, spec.tipo, spec.t[0], spec.t[1], 1500).forEach(p => {
+                        if (!p) return;
+                        x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]);
+                    }));
+                    if (!isFinite(x0)) { x0 = -10; x1 = 10; y0 = -10; y1 = 10; }
+                    if (x1 - x0 < 1e-9) { x0 -= 1; x1 += 1; }
+                    if (y1 - y0 < 1e-9) { y0 -= 1; y1 += 1; }
+                    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+                    let hw = (x1 - x0) / 2 * 1.15, hh = (y1 - y0) / 2 * 1.15;
+                    if (hh / hw > asp) hw = hh / asp; else hh = hw * asp;       // mismos px por unidad en X e Y
+                    xr = xr || [cx - hw, cx + hw]; yr = yr || [cy - hh, cy + hh];
+                }
+            }
+            return { xmin: xr[0], xmax: xr[1], ymin: yr[0], ymax: yr[1] };
+        }
+
+        // ---------- Puntos notables (solo funciones y = f(x)) ----------
+        function gmExtremoLocal(fn, a, b, maximo) {
+            const g = (Math.sqrt(5) - 1) / 2;
+            const f = v => maximo ? -fn(v) : fn(v);
+            let c = b - g * (b - a), d = a + g * (b - a), fc = f(c), fd = f(d);
+            for (let k = 0; k < 60; k++) {
+                if (fc < fd) { b = d; d = c; fd = fc; c = b - g * (b - a); fc = f(c); }
+                else { a = c; c = d; fc = fd; d = a + g * (b - a); fd = f(d); }
+            }
+            const x = (a + b) / 2;
+            return { x, y: fn(x) };
+        }
+
+        function gmPuntosNotables(c, xmin, xmax) {
+            const N = 1600, xs = [], ys = [];
+            for (let i = 0; i <= N; i++) { const x = xmin + (xmax - xmin) * i / N; xs.push(x); ys.push(c.fn(x)); }
+            const ceros = [], extremos = [];
+            for (let i = 0; i < N && ceros.length < 8; i++) {
+                const y0 = ys[i], y1 = ys[i + 1];
+                if (!isFinite(y0) || !isFinite(y1)) continue;
+                let xr = null;
+                if (y0 === 0) xr = xs[i];
+                else if (y0 * y1 < 0) {
+                    let a = xs[i], b = xs[i + 1];
+                    for (let k = 0; k < 55; k++) { const m = (a + b) / 2; const fm = c.fn(m); if (fm * c.fn(a) <= 0) b = m; else a = m; }
+                    xr = (a + b) / 2;
+                    if (!(Math.abs(c.fn(xr)) < 1e-6 * (1 + Math.max(Math.abs(y0), Math.abs(y1))))) xr = null;   // asíntota, no raíz
+                }
+                if (xr !== null && (!ceros.length || Math.abs(xr - ceros[ceros.length - 1].x) > (xmax - xmin) * 1e-4)) ceros.push({ x: Math.abs(xr) < 1e-9 ? 0 : xr, y: 0 });
+            }
+            for (let i = 1; i < N && extremos.length < 6; i++) {
+                const d0 = ys[i] - ys[i - 1], d1 = ys[i + 1] - ys[i];
+                if (![d0, d1, ys[i]].every(isFinite) || Math.abs(ys[i]) > 1e6) continue;
+                if (d0 * d1 < 0) {
+                    const max = d0 > 0;
+                    const e = gmExtremoLocal(c.fn, xs[i - 1], xs[i + 1], max);
+                    if (isFinite(e.y) && (!extremos.length || Math.abs(e.x - extremos[extremos.length - 1].x) > (xmax - xmin) * 1e-3)) {
+                        extremos.push({ x: Math.abs(e.x) < 1e-9 ? 0 : e.x, y: Math.abs(e.y) < 1e-9 ? 0 : e.y, tipo: max ? 'máximo' : 'mínimo' });
+                    }
+                }
+            }
+            let corteY = null;
+            if (xmin <= 0 && xmax >= 0) { const y0 = c.fn(0); if (isFinite(y0)) corteY = { x: 0, y: y0 }; }
+            return { ceros, extremos, corteY };
+        }
+
+        // ---------- Dibujo 2D ----------
+        function gmDibujar2D(canvas, spec, v, dpr, op = {}) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width / dpr, H = canvas.height / dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            const fondo = ctx.createLinearGradient(0, 0, 0, H);
+            fondo.addColorStop(0, '#070b16'); fondo.addColorStop(1, '#0b1428');
+            ctx.fillStyle = fondo; ctx.fillRect(0, 0, W, H);
+
+            const sx = W / (v.xmax - v.xmin), sy = H / (v.ymax - v.ymin);
+            const X = x => (x - v.xmin) * sx, Y = y => H - (y - v.ymin) * sy;
+            const nitido = p => Math.round(p) + 0.5;
+            const pasoX = spec.usaPi ? gmPasoPi(v.xmax - v.xmin) : gmPasoBonito(v.xmax - v.xmin, W / 95);
+            const pasoY = gmPasoBonito(v.ymax - v.ymin, H / 70);
+            const fx = val => spec.usaPi ? gmFmtPi(val) : gmFmt(val);
+
+            // cuadrícula
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(120,160,230,0.14)';
+            ctx.beginPath();
+            for (let k = Math.ceil(v.xmin / pasoX); k <= Math.floor(v.xmax / pasoX); k++) { const px = nitido(X(k * pasoX)); ctx.moveTo(px, 0); ctx.lineTo(px, H); }
+            for (let k = Math.ceil(v.ymin / pasoY); k <= Math.floor(v.ymax / pasoY); k++) { const py = nitido(Y(k * pasoY)); ctx.moveTo(0, py); ctx.lineTo(W, py); }
+            ctx.stroke();
+
+            // ejes
+            const ejeY = Math.min(Math.max(Y(0), 0), H), ejeX = Math.min(Math.max(X(0), 0), W);
+            ctx.strokeStyle = 'rgba(190,210,245,0.85)'; ctx.lineWidth = 1.6;
+            ctx.beginPath(); ctx.moveTo(0, nitido(ejeY)); ctx.lineTo(W, nitido(ejeY)); ctx.moveTo(nitido(ejeX), 0); ctx.lineTo(nitido(ejeX), H); ctx.stroke();
+
+            // números de los ejes
+            ctx.font = '12px system-ui, -apple-system, Segoe UI, sans-serif';
+            ctx.fillStyle = '#9fb3d9';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+            const abajo = ejeY + 16 < H;
+            for (let k = Math.ceil(v.xmin / pasoX); k <= Math.floor(v.xmax / pasoX); k++) {
+                const val = k * pasoX; if (Math.abs(val) < 1e-10) continue;
+                const px = X(val); if (px < 14 || px > W - 14) continue;
+                ctx.textBaseline = abajo ? 'top' : 'bottom';
+                ctx.fillText(fx(val), px, abajo ? ejeY + 5 : ejeY - 5);
+            }
+            const izq = ejeX - 8 > 34;
+            ctx.textAlign = izq ? 'right' : 'left'; ctx.textBaseline = 'middle';
+            for (let k = Math.ceil(v.ymin / pasoY); k <= Math.floor(v.ymax / pasoY); k++) {
+                const val = k * pasoY; if (Math.abs(val) < 1e-10) continue;
+                const py = Y(val); if (py < 10 || py > H - 10) continue;
+                ctx.fillText(gmFmt(val), izq ? ejeX - 7 : ejeX + 7, py);
+            }
+            if (ejeX > 0 && ejeX < W && ejeY > 0 && ejeY < H) { ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('0', ejeX - 6, ejeY + 5); }
+            ctx.font = 'italic 13px system-ui, sans-serif'; ctx.fillStyle = '#c9d8f5';
+            ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillText('x', W - 6, Math.min(ejeY - 4, H - 4) < 14 ? 14 : ejeY - 4);
+            ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillText('y', Math.min(ejeX + 6, W - 14), 4);
+
+            // curvas
+            ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.lineWidth = 2.6;
+            spec.curvas.forEach(c => {
+                ctx.strokeStyle = c.color;
+                ctx.beginPath();
+                if (spec.tipo === 'cartesiana') {
+                    let abierto = false, pyPrev = null, yPrev = 0;
+                    for (let px = -1; px <= W + 1; px += 0.5) {
+                        const y = c.fn(v.xmin + px / sx);
+                        if (!isFinite(y)) { abierto = false; pyPrev = null; continue; }
+                        const py = Y(y);
+                        if (py < -3 * H || py > 4 * H) { abierto = false; pyPrev = null; continue; }
+                        if (pyPrev !== null && Math.abs(py - pyPrev) > 2 * H && y * yPrev < 0) abierto = false;   // asíntota
+                        if (abierto) ctx.lineTo(px, py); else { ctx.moveTo(px, py); abierto = true; }
+                        pyPrev = py; yPrev = y;
+                    }
+                } else if (spec.tipo === 'polar' || spec.tipo === 'parametrica') {
+                    const pts = gmMuestrasParametricas(c, spec.tipo, spec.t[0], spec.t[1], 4000);
+                    let abierto = false;
+                    pts.forEach(p => {
+                        if (!p) { abierto = false; return; }
+                        const px = X(p[0]), py = Y(p[1]);
+                        if (Math.abs(px) > 1e5 || Math.abs(py) > 1e5) { abierto = false; return; }
+                        if (abierto) ctx.lineTo(px, py); else { ctx.moveTo(px, py); abierto = true; }
+                    });
+                } else if (spec.tipo === 'implicita') {
+                    gmTrazarImplicita(ctx, c.fn, v, W, H, X, Y);
+                }
+                ctx.stroke();
+            });
+
+            // puntos notables
+            (op.puntos || []).forEach(p => {
+                const px = X(p.x), py = Y(p.y);
+                if (px < -5 || px > W + 5 || py < -5 || py > H + 5) return;
+                ctx.beginPath(); ctx.arc(px, py, 4.5, 0, 2 * Math.PI);
+                ctx.fillStyle = p.color || '#ffffff'; ctx.fill();
+                ctx.lineWidth = 1.5; ctx.strokeStyle = '#0a0f1e'; ctx.stroke();
+            });
+
+            // leyenda
+            ctx.font = '13px system-ui, -apple-system, Segoe UI, sans-serif';
+            const anchoLey = Math.min(W - 20, Math.max(...spec.curvas.map(c => ctx.measureText(c.etiqueta).width)) + 50);
+            const altoLey = spec.curvas.length * 22 + 10;
+            ctx.fillStyle = 'rgba(8,14,30,0.78)';
+            ctx.strokeStyle = 'rgba(120,160,230,0.35)'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.roundRect ? ctx.roundRect(10, 10, anchoLey, altoLey, 8) : ctx.rect(10, 10, anchoLey, altoLey);
+            ctx.fill(); ctx.stroke();
+            ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+            spec.curvas.forEach((c, i) => {
+                const cy = 10 + 16 + i * 22;
+                ctx.strokeStyle = c.color; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(20, cy); ctx.lineTo(38, cy); ctx.stroke();
+                ctx.fillStyle = '#e6eeff'; ctx.fillText(c.etiqueta, 46, cy, anchoLey - 50);
+            });
+
+            // cursor: coordenadas (y punto sobre la curva en funciones y = f(x))
+            if (op.cursor) {
+                const cx = op.cursor.x, cyp = op.cursor.y;
+                const mx = v.xmin + cx / sx;
+                let texto = `x = ${gmFmt(mx)}   y = ${gmFmt(v.ymin + (H - cyp) / sy)}`;
+                if (spec.tipo === 'cartesiana') {
+                    const c0 = spec.curvas[0], y0 = c0.fn(mx);
+                    if (isFinite(y0) && Y(y0) > -H && Y(y0) < 2 * H) {
+                        const px = cx, py = Y(y0);
+                        ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, H); ctx.stroke(); ctx.setLineDash([]);
+                        ctx.beginPath(); ctx.arc(px, py, 5, 0, 2 * Math.PI); ctx.fillStyle = c0.color; ctx.fill();
+                        ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
+                        texto = `(${gmFmt(mx)}, ${gmFmt(y0)})`;
+                    }
+                }
+                ctx.font = '13px system-ui, sans-serif';
+                const tw = ctx.measureText(texto).width + 16;
+                ctx.fillStyle = 'rgba(8,14,30,0.85)'; ctx.fillRect(W - tw - 10, H - 34, tw, 24);
+                ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(texto, W - tw - 2, H - 22);
+            }
+        }
+
+        // Curvas implícitas f(x, y) = 0 con "marching squares".
+        function gmTrazarImplicita(ctx, f, v, W, H, X, Y) {
+            const celda = 4;
+            const nx = Math.ceil(W / celda), ny = Math.ceil(H / celda);
+            const dx = (v.xmax - v.xmin) / nx, dy = (v.ymax - v.ymin) / ny;
+            const val = new Float64Array((nx + 1) * (ny + 1));
+            for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) val[j * (nx + 1) + i] = f(v.xmin + i * dx, v.ymax - j * dy, 0);
+            const interp = (x0, y0, v0, x1, y1, v1) => { const t = v0 / (v0 - v1); return [x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]; };
+            for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+                const a = val[j * (nx + 1) + i], b = val[j * (nx + 1) + i + 1], c = val[(j + 1) * (nx + 1) + i + 1], d = val[(j + 1) * (nx + 1) + i];
+                if (!isFinite(a) || !isFinite(b) || !isFinite(c) || !isFinite(d)) continue;
+                const caso = (a > 0 ? 8 : 0) | (b > 0 ? 4 : 0) | (c > 0 ? 2 : 0) | (d > 0 ? 1 : 0);
+                if (caso === 0 || caso === 15) continue;
+                const x0 = i * celda, x1 = (i + 1) * celda, y0 = j * celda, y1 = (j + 1) * celda;
+                const T = () => interp(x0, y0, a, x1, y0, b), R = () => interp(x1, y0, b, x1, y1, c);
+                const B = () => interp(x0, y1, d, x1, y1, c), L = () => interp(x0, y0, a, x0, y1, d);
+                const centro = (a + b + c + d) / 4;
+                let segs;
+                switch (caso) {
+                    case 1: case 14: segs = [[L, B]]; break;
+                    case 2: case 13: segs = [[B, R]]; break;
+                    case 3: case 12: segs = [[L, R]]; break;
+                    case 4: case 11: segs = [[T, R]]; break;
+                    case 6: case 9: segs = [[T, B]]; break;
+                    case 7: case 8: segs = [[T, L]]; break;
+                    case 5: segs = centro > 0 ? [[T, L], [B, R]] : [[T, R], [L, B]]; break;
+                    case 10: segs = centro > 0 ? [[T, R], [L, B]] : [[T, L], [B, R]]; break;
+                    default: segs = [];
+                }
+                segs.forEach(([p, q]) => { const P = p(), Q = q(); ctx.moveTo(P[0], P[1]); ctx.lineTo(Q[0], Q[1]); });
+            }
+        }
+
+        // ---------- Dibujo 3D: superficies z = f(x, y) ----------
+        function gmDibujar3D(canvas, spec, cam, dpr) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width / dpr, H = canvas.height / dpr;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const fondo = ctx.createLinearGradient(0, 0, 0, H);
+            fondo.addColorStop(0, '#070b16'); fondo.addColorStop(1, '#0b1428');
+            ctx.fillStyle = fondo; ctx.fillRect(0, 0, W, H);
+
+            const c0 = spec.curvas[0];
+            const xr = spec.x || [-5, 5], yr = spec.y || [-5, 5];
+            const N = 46;
+            const zs = [];
+            let zmin = Infinity, zmax = -Infinity;
+            for (let j = 0; j <= N; j++) {
+                zs.push([]);
+                for (let i = 0; i <= N; i++) {
+                    let z = c0.fn(xr[0] + (xr[1] - xr[0]) * i / N, yr[0] + (yr[1] - yr[0]) * j / N, 0);
+                    if (!isFinite(z) || Math.abs(z) > 1e6) z = NaN;
+                    zs[j].push(z);
+                    if (isFinite(z)) { zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); }
+                }
+            }
+            if (!isFinite(zmin)) { zmin = -1; zmax = 1; }
+            if (zmax - zmin < 1e-9) { zmin -= 1; zmax += 1; }
+
+            const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+            const escala = Math.min(W, H) * 0.27 * cam.zoom;
+            const proyectar = (X, Y, Z) => {           // X, Y, Z en [-1, 1]
+                const x1 = X * cy - Y * sy, y1 = X * sy + Y * cy;
+                const y2 = y1 * cp - Z * sp, z2 = y1 * sp + Z * cp;
+                const k = 7 / (7 + y2);
+                return { sx: W / 2 + x1 * escala * k, sy: H / 2 + 8 - z2 * escala * k, prof: y2 };
+            };
+            const nx = (i) => -1 + 2 * i / N, nz = (z) => ((z - zmin) / (zmax - zmin) - 0.5) * 1.3;
+
+            // base y ejes
+            const esq = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => proyectar(a, b, -0.65));
+            ctx.strokeStyle = 'rgba(150,180,240,0.35)'; ctx.lineWidth = 1;
+            ctx.beginPath(); esq.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath(); ctx.stroke();
+
+            const quads = [];
+            for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+                const z00 = zs[j][i], z10 = zs[j][i + 1], z11 = zs[j + 1][i + 1], z01 = zs[j + 1][i];
+                if (![z00, z10, z11, z01].every(isFinite)) continue;
+                const P = [proyectar(nx(i), nx(j), nz(z00)), proyectar(nx(i + 1), nx(j), nz(z10)), proyectar(nx(i + 1), nx(j + 1), nz(z11)), proyectar(nx(i), nx(j + 1), nz(z01))];
+                const zm = (z00 + z10 + z11 + z01) / 4;
+                quads.push({ P, prof: (P[0].prof + P[1].prof + P[2].prof + P[3].prof) / 4, t: (zm - zmin) / (zmax - zmin) });
+            }
+            quads.sort((a, b) => b.prof - a.prof);
+            ctx.lineJoin = 'round'; ctx.lineWidth = 0.6;
+            quads.forEach(q => {
+                ctx.beginPath(); q.P.forEach((p, i) => i ? ctx.lineTo(p.sx, p.sy) : ctx.moveTo(p.sx, p.sy)); ctx.closePath();
+                ctx.fillStyle = `hsl(${Math.round(235 - 235 * q.t)}, 82%, ${Math.round(40 + 18 * q.t)}%)`;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(5,10,25,0.35)'; ctx.stroke();
+            });
+
+            ctx.font = 'italic 13px system-ui, sans-serif'; ctx.fillStyle = '#c9d8f5'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            const ex = proyectar(1.12, -1, -0.65), ey = proyectar(-1, 1.12, -0.65), ez = proyectar(-1.1, -1.1, 0.75);
+            ctx.fillText('x', ex.sx, ex.sy); ctx.fillText('y', ey.sx, ey.sy);
+            ctx.strokeStyle = 'rgba(200,220,255,0.6)'; ctx.lineWidth = 1.4;
+            const b0 = proyectar(-1, -1, -0.65), b1 = proyectar(-1, -1, 0.7);
+            ctx.beginPath(); ctx.moveTo(b0.sx, b0.sy); ctx.lineTo(b1.sx, b1.sy); ctx.stroke(); ctx.fillText('z', ez.sx, ez.sy);
+            ctx.font = '12px system-ui, sans-serif'; ctx.fillStyle = '#9fb3d9'; ctx.textAlign = 'left';
+            ctx.fillText(`z de ${gmFmt(zmin)} a ${gmFmt(zmax)}`, 12, H - 14);
+
+            ctx.font = '13px system-ui, sans-serif';
+            const tw = ctx.measureText(c0.etiqueta).width + 28;
+            ctx.fillStyle = 'rgba(8,14,30,0.78)'; ctx.fillRect(10, 10, Math.min(tw, W - 20), 28);
+            ctx.fillStyle = '#e6eeff'; ctx.textBaseline = 'middle'; ctx.fillText(c0.etiqueta, 22, 24, W - 44);
+            return { zmin, zmax };
+        }
+
+        // ---------- Lector local del pedido (respaldo si la IA falla) ----------
+        function gmEspecLocal(comando, exigirIgual) {
+            let txt = String(comando || '').replace(/[“”"]/g, '').replace(/\s+/g, ' ').trim();
+            let x = null;
+            const mr = txt.match(/\b(?:desde|entre|de)\s+(-?\d+(?:[.,]\d+)?)\s*(?:a|hasta|y)\s+(-?\d+(?:[.,]\d+)?)\b/i);
+            if (mr) { x = [parseFloat(mr[1].replace(',', '.')), parseFloat(mr[2].replace(',', '.'))]; txt = txt.replace(mr[0], ' '); }
+            const limpiar = e => e.replace(/\b(por favor|porfa|porfavor|en el plano.*|en un plano.*|con sus? .*|y su .*|gracias)\b.*$/i, '').replace(/[.?!]+$/, '').trim();
+            const curvas = [];
+            const re = /\b(?:y|f\s*\(\s*x\s*\)|g\s*\(\s*x\s*\))\s*=\s*(.+?)(?=\s+(?:y|e)\s+(?:y|f\s*\(\s*x\s*\)|g\s*\(\s*x\s*\))\s*=|[;]|$)/gi;
+            let m;
+            while ((m = re.exec(txt)) !== null) { const e = limpiar(m[1]); if (e) curvas.push({ expr: e, etiqueta: 'y = ' + e }); }
+            let tipo = 'cartesiana';
+            if (!curvas.length) {
+                const mz = txt.match(/\bz\s*=\s*(.+)$/i);
+                if (mz) { tipo = 'superficie'; const e = limpiar(mz[1]); curvas.push({ expr: e, etiqueta: 'z = ' + e }); }
+            }
+            if (!curvas.length) {
+                const mi = txt.match(/([^=]*\b[xy]\b[^=]*=[^=]+)$/i);
+                if (mi && /\bx\b/i.test(mi[1]) && /\by\b/i.test(mi[1])) {
+                    const e = limpiar(mi[1].replace(/^.*?\b(?:grafic\w*|plote\w*|traza\w*|dibuja\w*)\s+(?:la\s+)?(?:ecuacion|ecuación|curva|funcion|función|grafica|gráfica)?\s*(?:de\s+)?/i, ''));
+                    tipo = 'implicita'; curvas.push({ expr: e, etiqueta: e });
+                }
+            }
+            if (!curvas.length && !exigirIgual) {
+                const ml = txt.match(/\b(?:grafic\w*|plote\w*|traza\w*|dibuja\w*|muestr\w*)\s+(?:me\s+)?(?:la\s+)?(?:grafica|gráfica|funcion|función|curva)?\s*(?:de\s+|:)?\s*(?:la\s+funcion\s+|la\s+función\s+)?(.+)$/i);
+                if (ml) { const e = limpiar(ml[1]).replace(/^(?:f\s*\(\s*x\s*\)|y)\s*=\s*/i, ''); if (e) curvas.push({ expr: e, etiqueta: 'y = ' + e }); }
+            }
+            if (!curvas.length) return null;
+            return { titulo: 'Gráfica', tipo, curvas, x };
+        }
+
+        const GM_PROMPT_SPEC =
+            'Eres un asistente de matemáticas que convierte el pedido del usuario en una DESCRIPCIÓN de gráfica. Responde ÚNICAMENTE con un JSON válido (sin markdown, sin texto extra) con esta forma: ' +
+            '{"titulo":"Título corto","tipo":"cartesiana|polar|parametrica|implicita|superficie","curvas":[...],"x":[xmin,xmax],"y":[ymin,ymax],"t":[tmin,tmax]}. ' +
+            'Tipos: cartesiana = y en función de x, curvas:[{"etiqueta":"y = x² − 4","expr":"x^2-4"}]; ' +
+            'polar = r en función del ángulo, que se escribe t, curvas:[{"etiqueta":"r = 2cos(3θ)","expr":"2*cos(3*t)"}] y "t":[0,6.2832]; ' +
+            'parametrica = curvas:[{"etiqueta":"x = cos t, y = sin 2t","xexpr":"cos(t)","yexpr":"sin(2*t)"}] y "t":[0,6.2832]; ' +
+            'implicita = curva f(x,y)=0 (círculos, elipses, hipérbolas...), curvas:[{"etiqueta":"x² + y² = 25","expr":"x^2+y^2-25"}]; ' +
+            'superficie = z en función de x e y, curvas:[{"etiqueta":"z = sin(x)·cos(y)","expr":"sin(x)*cos(y)"}] con "x":[-5,5],"y":[-5,5]. ' +
+            'REGLAS: en "expr", "xexpr" y "yexpr" usa SOLO números, las variables permitidas (x; o y también en implícita y superficie; o t en polar y paramétrica), los operadores + - * / ^, paréntesis y las funciones sin cos tan asin acos atan sinh cosh tanh exp ln log sqrt cbrt abs floor ceil sign sec csc cot, y las constantes pi y e. ' +
+            'Escribe SIEMPRE la multiplicación con * (2*x, no 2x). Convierte "sen" en sin, "√" en sqrt, "x²" en x^2, "θ" en t. Sin LaTeX, sin signo = dentro de expr (salvo implícita, donde también puede ir la ecuación completa). ' +
+            'Si el usuario pide varias funciones, inclúyelas todas (máximo 6) en el mismo tipo. "x", "y" y "t" deben ser números (puedes omitir los que no apliquen); ' +
+            'elige un rango que muestre lo importante (vértice, raíces, asíntotas, periodos completos; para funciones trigonométricas usa múltiplos de pi en números, por ejemplo -6.2832 a 6.2832) y respeta el rango si el usuario lo dio. ' +
+            'Para círculos, elipses y curvas polares o paramétricas usa rangos x e y con la misma amplitud para que no se deformen.';
+
+        function detectarPedidoGrafica(texto) {
+            const n = normalizarTexto(texto || '');
+            if (!n) return false;
+            if (/\b(html|pdf|word|docx|excel|xlsx|powerpoint|pptx|presentacion|diapositivas?|codigo|script|programa|playlist|cancion|musica)\b/.test(n)) return false;
+            const hayExpresion = /[a-z0-9)]\s*\^\s*[-(a-z0-9]/.test(n);
+            if (/\b(barras?|pastel|torta|circular|histograma|pictograma|organigrama|diagrama|mapa)\b/.test(n) && !/\b(funcion|ecuacion)\b/.test(n) && !hayExpresion) return false;
+            if (/^\s*(?:y|f\s*\(\s*x\s*\)|z|r)\s*=\s*\S/.test(n)) return true;
+            const verboGraf = /\b(grafic\w*|plote\w*|plot|traza\w*|trazar|representa\w*|bosqueja\w*|esboza\w*)\b/.test(n);
+            const pideVisual = /\b(dibuja\w*|muestra\w*|ensena\w*|hace\w*|haz\w*|genera\w*|crea\w*|arma\w*|dame|quiero|necesito|ver|pon\w*)\b/.test(n);
+            const sustGraf = /\b(grafica|grafico|graficas|graficos|curva|plano cartesiano|funcion)\b/.test(n);
+            const pideGrafica = verboGraf || (sustGraf && pideVisual) || (pideVisual && /\b(?:y|z|r|f\s*\(\s*x\s*\))\s*=/.test(n));
+            if (!pideGrafica) return false;
+            const cue = /\b(funcion|funciones|ecuacion|parabola|recta|seno|coseno|tangente|secante|exponencial|logaritm\w*|circunferencia|circulo|elipse|hiperbola|polinomio|cubica|cuadratica|lineal|valor absoluto|raiz|polar|parametric\w*|superficie|paraboloide|esfera|cono|sen|sin|cos|tan|ln|log|sqrt|pi|derivada|integral|asintota)\b/.test(n)
+                || /\b[xz]\b/.test(n) || hayExpresion || /=/.test(n);
+            return cue;
+        }
+
+        // ---------- Interfaz: dibujo interactivo dentro de la app ----------
+        function gmMostrar(spec) {
+            const es3D = spec.tipo === 'superficie';
+            const id = 'gm' + Date.now();
+            const nombreArchivo = `${IA_NAME_ESCRITO}_grafica_${slugArchivo(spec.curvas[0].etiqueta, 24)}.png`;
+            mediaResult.innerHTML = `
+                <div style="width:100%;">
+                    <div style="font-size:0.9rem;color:var(--text-color);margin-bottom:6px;">📈 ${escaparHTML(spec.titulo)}</div>
+                    <canvas id="${id}" style="width:100%;height:min(520px,70vh);display:block;border:1px solid var(--secondary-glow);border-radius:12px;touch-action:none;cursor:grab;background:#070b16;"></canvas>
+                    <div id="${id}info" style="text-align:left;font-size:0.76rem;color:#9fb3d9;margin-top:8px;line-height:1.55;"></div>
+                    <div class="tv-row" style="justify-content:center;margin-top:8px;">
+                        <button class="tv-btn" id="${id}reset">↺ Restablecer vista</button>
+                        <a class="tv-btn primario" id="${id}png" download="${nombreArchivo}" href="#" style="text-decoration:none;">⬇ Descargar PNG</a>
+                        <button class="tv-btn" id="${id}cerrar">✕ Cerrar</button>
+                    </div>
+                    <div class="media-hint">${es3D ? 'Arrastra para girar · rueda o pellizco para acercar' : 'Arrastra para mover · rueda o pellizco para zoom · doble clic para restablecer'}</div>
+                </div>`;
+            mediaResult.style.display = 'block';
+
+            const canvas = document.getElementById(id);
+            const info = document.getElementById(id + 'info');
+            const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));   // siempre alta resolución: líneas y texto nítidos
+            let W = 800, H = 480, vista = null, vista0 = null, cam = { yaw: -0.6, pitch: 0.95, zoom: 1 }, cursor = null, puntos = [];
+
+            const ajustar = () => {
+                const r = canvas.getBoundingClientRect();
+                const nW = Math.max(280, Math.round(r.width)), nH = Math.max(240, Math.round(r.height || 480));
+                if (nW === W && nH === H && canvas.width) return false;
+                W = nW; H = nH; canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+                return true;
+            };
+            const dibujar = (sinCursor) => {
+                if (es3D) { const r = gmDibujar3D(canvas, spec, cam, dpr); if (r && !info.dataset.ok) { info.textContent = `Superficie 3D · z va de ${gmFmt(r.zmin)} a ${gmFmt(r.zmax)}`; info.dataset.ok = '1'; } return; }
+                gmDibujar2D(canvas, spec, vista, dpr, { puntos, cursor: sinCursor ? null : cursor });
+            };
+
+            ajustar();
+            if (!es3D) {
+                vista0 = gmVistaInicial(spec, W, H); vista = { ...vista0 };
+                if (spec.tipo === 'cartesiana') {
+                    const trozos = [];
+                    spec.curvas.slice(0, 2).forEach((c, i) => {
+                        const pn = gmPuntosNotables(c, vista0.xmin, vista0.xmax);
+                        const col = c.color;
+                        pn.ceros.forEach(p => puntos.push({ x: p.x, y: p.y, color: col }));
+                        pn.extremos.forEach(p => puntos.push({ x: p.x, y: p.y, color: col }));
+                        if (pn.corteY) puntos.push({ x: 0, y: pn.corteY.y, color: col });
+                        const pref = spec.curvas.length > 1 ? `${c.etiqueta}: ` : '';
+                        const linea = [];
+                        if (pn.ceros.length) linea.push(`raíces en x ≈ ${pn.ceros.slice(0, 6).map(p => gmFmt(p.x)).join(', ')}${pn.ceros.length > 6 ? '…' : ''}`);
+                        if (pn.corteY) linea.push(`corta el eje Y en (0, ${gmFmt(pn.corteY.y)})`);
+                        pn.extremos.slice(0, 4).forEach(p => linea.push(`${p.tipo} en (${gmFmt(p.x)}, ${gmFmt(p.y)})`));
+                        if (linea.length) trozos.push(pref + linea.join(' · '));
+                    });
+                    info.innerHTML = trozos.length ? '<b>Puntos notables</b> (dentro de la vista inicial)<br>' + trozos.map(escaparHTML).join('<br>') : '';
+                } else {
+                    info.textContent = spec.tipo === 'implicita' ? 'Curva implícita f(x, y) = 0' : spec.tipo === 'polar' ? 'Curva en coordenadas polares' : 'Curva paramétrica';
+                }
+            }
+            dibujar();
+
+            // ----- interacción -----
+            const punteros = new Map();
+            let ultimo = null, distPrev = null;
+            const rectPos = e => { const r = canvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+            const zoom2D = (factor, cx, cy) => {
+                const wx = vista.xmin + cx / W * (vista.xmax - vista.xmin), wy = vista.ymax - cy / H * (vista.ymax - vista.ymin);
+                const rx = (vista.xmax - vista.xmin) / factor, ry = (vista.ymax - vista.ymin) / factor;
+                vista = { xmin: wx - (cx / W) * rx, xmax: wx + (1 - cx / W) * rx, ymax: wy + (cy / H) * ry, ymin: wy - (1 - cy / H) * ry };
+            };
+            canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); punteros.set(e.pointerId, rectPos(e)); ultimo = rectPos(e); canvas.style.cursor = 'grabbing'; cursor = null; });
+            canvas.addEventListener('pointermove', e => {
+                const pos = rectPos(e);
+                if (!punteros.has(e.pointerId)) { if (!es3D) { cursor = pos; dibujar(); } return; }
+                punteros.set(e.pointerId, pos);
+                if (punteros.size === 2) {
+                    const [a, b] = [...punteros.values()];
+                    const d = Math.hypot(a.x - b.x, a.y - b.y);
+                    if (distPrev) { const f = d / distPrev; if (es3D) cam.zoom = Math.min(4, Math.max(0.3, cam.zoom * f)); else zoom2D(f, (a.x + b.x) / 2, (a.y + b.y) / 2); dibujar(true); }
+                    distPrev = d; return;
+                }
+                const dx = pos.x - ultimo.x, dy = pos.y - ultimo.y; ultimo = pos;
+                if (es3D) { cam.yaw += dx * 0.01; cam.pitch = Math.min(1.5, Math.max(-0.2, cam.pitch + dy * 0.01)); }
+                else { const ax = (vista.xmax - vista.xmin) / W, ay = (vista.ymax - vista.ymin) / H; vista.xmin -= dx * ax; vista.xmax -= dx * ax; vista.ymin += dy * ay; vista.ymax += dy * ay; }
+                dibujar(true);
+            });
+            const soltar = e => { punteros.delete(e.pointerId); distPrev = null; canvas.style.cursor = 'grab'; };
+            canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar);
+            canvas.addEventListener('pointerleave', () => { if (!punteros.size) { cursor = null; dibujar(); } });
+            canvas.addEventListener('wheel', e => {
+                e.preventDefault();
+                const f = Math.exp(-e.deltaY * 0.0016);
+                if (es3D) cam.zoom = Math.min(4, Math.max(0.3, cam.zoom * f));
+                else { const p = rectPos(e); zoom2D(f, p.x, p.y); }
+                dibujar(true);
+            }, { passive: false });
+            const restablecer = () => { if (es3D) cam = { yaw: -0.6, pitch: 0.95, zoom: 1 }; else vista = { ...vista0 }; dibujar(true); };
+            canvas.addEventListener('dblclick', restablecer);
+            document.getElementById(id + 'reset').onclick = restablecer;
+            document.getElementById(id + 'png').addEventListener('click', () => { dibujar(true); document.getElementById(id + 'png').href = canvas.toDataURL('image/png'); });
+            document.getElementById(id + 'cerrar').onclick = () => { if (obs) obs.disconnect(); mediaResult.innerHTML = ''; mediaResult.style.display = 'none'; };
+
+            let obs = null;
+            if (window.ResizeObserver) { obs = new ResizeObserver(() => { if (!document.body.contains(canvas)) { obs.disconnect(); return; } if (ajustar()) dibujar(); }); obs.observe(canvas); }
+            mediaResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return { puntos };
+        }
+
+        async function generarGraficaMatematica(comando) {
+            setStatus('Preparando la gráfica...');
+            let spec = null, ultimoError = '';
+            const intentar = (raw) => { try { spec = gmNormalizarSpec(raw); return true; } catch (e) { ultimoError = e && e.message ? e.message : String(e); return false; } };
+
+            // 1) Si el usuario escribió la ecuación ("y = x^2 - 4"), se lee directo, sin gastar una llamada a la IA.
+            const simple = gmEspecLocal(comando, true);
+            if (simple) intentar(simple);
+
+            // 2) Si no, la IA traduce el pedido ("seno y coseno", "una parábola con vértice en...") a una descripción.
+            if (!spec) {
+                const r = await pedirJSONaIA([
+                    { role: 'system', content: GM_PROMPT_SPEC },
+                    { role: 'user', content: comando }
+                ], { maxTokens: 1800 });
+                if (r.datos) intentar(r.datos); else ultimoError = r.error || ultimoError;
+            }
+
+            // 3) Último recurso: lector local más flexible.
+            if (!spec) { const suelto = gmEspecLocal(comando, false); if (suelto) intentar(suelto); }
+
+            if (!spec) {
+                const msg = `No pude entender qué función graficar${ultimoError ? ` (${ultimoError})` : ''}. Escríbela así, por ejemplo: "grafica y = x^2 - 4", "grafica y = sin(x)", "grafica x^2 + y^2 = 25" o "grafica r = 2cos(3t)".`;
+                setStatus(msg, true);
+                agregarMensajeChat('assistant', msg);
+                await hablar('No pude entender la función. Te dejé ejemplos de cómo pedirla en el chat.');
+                estadoEscucha = 'DORMIDO';
+                setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+                return;
+            }
+
+            try {
+                gmMostrar(spec);
+                const nombres = spec.curvas.map(c => c.etiqueta).join(' ; ');
+                agregarMensajeChat('assistant', `Aquí tienes la gráfica de ${nombres} (mira el lienzo debajo del chat: puedes mover, hacer zoom y descargarla en PNG).`);
+                await hablar(`Aquí tienes la gráfica. Puedes moverla, hacer zoom y descargarla como imagen.`);
+            } catch (e) {
+                const msg = `No pude dibujar la gráfica (${e && e.message ? e.message : e}).`;
+                setStatus(msg, true);
+                agregarMensajeChat('assistant', msg);
+            }
+            estadoEscucha = 'DORMIDO';
+            setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+        }
+
         async function generarPDFDesdeTexto(tema, comando) {
             const pedido = analizarPedidoDocumento(comando || tema);
             setStatus('Generando PDF...');
@@ -6756,7 +8341,7 @@ while True:
                         "anthropic-dangerous-direct-browser-access": "true"
                     },
                     body: JSON.stringify({
-                        model: "claude-sonnet-5",
+                        model: "claude-sonnet-5-5",
                         max_tokens: opciones.maxTokens || 2048,
                         system: systemMsg ? systemMsg.content : undefined,
                         messages: userMsgs
@@ -6780,6 +8365,79 @@ while True:
             } catch (err) {
                 return { error: "Servicio de IA: error de red" };
             }
+        }
+
+        function textoDeContenido(c) { return Array.isArray(c) ? c.map(x => (x && x.text) ? x.text : '').join('\n') : String(c || ''); }
+        function limpiarSalidaRespaldo(t, crudo) { t = limpiarPensamiento(t || ''); return crudo ? t : limpiarMarkdown(limpiarNotacionLatex(t)); }
+
+        // ChatGPT (OpenAI) y cualquier proveedor compatible con su formato (OpenRouter, DeepSeek, Mistral...).
+        async function llamarOpenAICompat(mensajes, opciones, cfg) {
+            const cuerpo = {
+                model: cfg.model,
+                messages: mensajes.map(m => ({ role: m.role, content: textoDeContenido(m.content) })),
+                temperature: opciones.temperatura ?? 0.7,
+                max_tokens: opciones.maxTokens || 2048
+            };
+            for (let intento = 0; intento < 3; intento++) {
+                try {
+                    const r = await fetch(cfg.url.replace(/\/+$/, '') + '/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${cfg.key}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cuerpo)
+                    });
+                    if (!r.ok) {
+                        let det = `código ${r.status}`;
+                        try { const b = await r.json(); if (b?.error?.message) det = b.error.message; } catch (e) {}
+                        if (r.status === 400 && /max_completion_tokens/i.test(det) && 'max_tokens' in cuerpo) { cuerpo.max_completion_tokens = cuerpo.max_tokens; delete cuerpo.max_tokens; continue; }
+                        if (r.status === 400 && /temperature/i.test(det) && 'temperature' in cuerpo) { delete cuerpo.temperature; continue; }
+                        return { error: `${cfg.nombre}: ${det}` };
+                    }
+                    const d = await r.json();
+                    const t = d.choices?.[0]?.message?.content;
+                    return t ? { texto: limpiarSalidaRespaldo(t, !!opciones.crudo) } : { error: `${cfg.nombre}: respuesta vacía` };
+                } catch (e) { return { error: `${cfg.nombre}: error de red` }; }
+            }
+            return { error: `${cfg.nombre}: no aceptó la petición` };
+        }
+
+        async function llamarGeminiChat(mensajes, opciones) {
+            const sys = mensajes.find(m => m.role === 'system');
+            const contents = mensajes.filter(m => m.role !== 'system').map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: textoDeContenido(m.content) }] }));
+            try {
+                const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_CHAT_MODEL}:generateContent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+                    body: JSON.stringify({
+                        systemInstruction: sys ? { parts: [{ text: textoDeContenido(sys.content) }] } : undefined,
+                        contents,
+                        generationConfig: { maxOutputTokens: opciones.maxTokens || 2048, temperature: opciones.temperatura ?? 0.7 }
+                    })
+                });
+                if (!r.ok) {
+                    let det = `código ${r.status}`;
+                    try { const b = await r.json(); if (b?.error?.message) det = b.error.message; } catch (e) {}
+                    return { error: `Gemini: ${det}` };
+                }
+                const d = await r.json();
+                const t = (d.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('');
+                return t ? { texto: limpiarSalidaRespaldo(t, !!opciones.crudo) } : { error: 'Gemini: respuesta vacía' };
+            } catch (e) { return { error: 'Gemini: error de red' }; }
+        }
+
+        // Prueba, en orden, las claves opcionales que el usuario haya guardado.
+        async function llamarRespaldosIA(mensajes, opciones, omitirClaude) {
+            const intentos = [];
+            if (!omitirClaude && CLAUDE_API_KEY) intentos.push(() => llamarClaudeIA(mensajes, opciones));
+            if (OPENAI_API_KEY) intentos.push(() => llamarOpenAICompat(mensajes, opciones, { url: 'https://api.openai.com/v1', key: OPENAI_API_KEY, model: OPENAI_MODEL, nombre: 'ChatGPT' }));
+            if (GEMINI_API_KEY) intentos.push(() => llamarGeminiChat(mensajes, opciones));
+            if (OTRO_API_KEY && OTRO_API_URL && OTRO_API_MODEL) intentos.push(() => llamarOpenAICompat(mensajes, opciones, { url: OTRO_API_URL, key: OTRO_API_KEY, model: OTRO_API_MODEL, nombre: 'Otro proveedor' }));
+            const errores = [];
+            for (const f of intentos) {
+                const r = await f();
+                if (r.texto) return r;
+                errores.push(r.error || '');
+            }
+            return { error: errores.join(' | ') || 'No hay claves de respaldo guardadas.' };
         }
 
         async function llamarChatIA(mensajes, opciones = {}) {
@@ -6866,10 +8524,10 @@ while True:
             }
 
             // Respaldo: si Groq falló en todos sus modelos y hay clave de Claude, se usa Claude.
-            if (claudeValida && !crudo) {
-                const resultadoClaude = await llamarClaudeIA(mensajes, opciones);
-                if (resultadoClaude.texto) return resultadoClaude;
-                ultimoError += ` | ${resultadoClaude.error || ''}`;
+            {
+                const respaldo = await llamarRespaldosIA(mensajes, opciones, crudo && claudeValida);
+                if (respaldo.texto) return respaldo;
+                if (respaldo.error) ultimoError += ` | ${respaldo.error}`;
             }
 
             return { error: `No se pudo conectar con los servidores de IA. (${ultimoError})` };
@@ -6912,6 +8570,15 @@ while True:
 
             agregarMensajeChat('user', comando);
 
+            // "las quiero en un mismo pdf las dos imágenes que te di": usa el último lote de imágenes.
+            if (!accionPendiente && ultimoLoteImagenes.length) {
+                const formatoImgs = detectarFormatoDocParaImagenes(comando, true);
+                if (formatoImgs) {
+                    await crearDocumentoDesdeImagenes(ultimoLoteImagenes, formatoImgs);
+                    return;
+                }
+            }
+
             if (!accionPendiente && detectarNuevoChat(comando)) {
                 await iniciarNuevoChat(true);
                 return;
@@ -6938,6 +8605,16 @@ while True:
                 await hablar(RESPUESTA_CREADOR);
                 estadoEscucha = 'DORMIDO';
                 setStatus(`En espera. Di "${PALABRA_ACTIVACION_TEXTO}" para activarme.`);
+                return;
+            }
+
+            if (detectarPedidoCuestionario(comando)) {
+                await generarWordCuestionario(comando, null);
+                return;
+            }
+
+            if (detectarPedidoGrafica(comando)) {
+                await generarGraficaMatematica(comando);
                 return;
             }
 
@@ -6980,7 +8657,7 @@ while True:
 
             const llamadaWhatsapp = detectarLlamarWhatsapp(comando);
             if (llamadaWhatsapp) {
-                await llamarPorWhatsappAccion(llamadaWhatsapp.nombreDicho, llamadaWhatsapp.esLlamada, llamadaWhatsapp.mensaje);
+                await llamarPorWhatsappAccion(llamadaWhatsapp.nombreDicho, llamadaWhatsapp.esLlamada);
                 return;
             }
 
@@ -7111,7 +8788,7 @@ while True:
                     `${INSTRUCCION_FORMATO_CLARO} ` +
                     `Si el usuario pide "el problema N" de una lista o imagen, resuelve únicamente ese, con el mismo nivel de detalle. ` +
                     `No agregues despedidas tipo "¿algo más?": eso ya lo gestiona el sistema. ` +
-                    `IMPORTANTE sobre tus capacidades reales: el sistema que te rodea SÍ puede generar imágenes, generar y modificar PDF, generar presentaciones de PowerPoint (.pptx) sin marca de agua, generar documentos de Word (.docx) sin marca de agua, generar hojas de cálculo de Excel (.xlsx) sin marca de agua, pegar una imagen que suba el usuario dentro de un PDF, un Word o un PowerPoint descargable, leer documentos de Word (.docx), Excel (.xlsx/.xls), PDF y archivos de código fuente (Python, JavaScript, Java, C/C++, etc.) que el usuario suba (incluyendo resolver ejercicios que contengan), generar código HTML con vista previa, generar scripts/programas descargables en el lenguaje que pidan (Python, Java, C++, C#, PHP, Ruby, Go, Rust, Swift, Kotlin, SQL, Bash, PowerShell, R, MATLAB, Dart, Lua, etc.) como archivo listo para bajar, abrir páginas web, buscar y reproducir música de YouTube, crear/gestionar playlists, reconocer gestos de mano por cámara (palma abierta, puño, pulgar arriba, señalar, paz, y ahora también mover una mano para rotar/explorar la esfera central y juntar/separar dos manos para agrandar o achicar imágenes generadas), encender o apagar la cámara del dispositivo bajo pedido explícito, abrir apps como WhatsApp, Teams, Zoom, Spotify, Slack, Discord, Word, Excel o PowerPoint (usa la app instalada si el dispositivo la tiene, o su versión web si no), abrir un chat de WhatsApp con un contacto guardado, vincularse con Waze para marcar un destino y empezar a navegar ("marca mi destino a...", "navega a...", "cómo llego a...") o para mostrar el tráfico en vivo ("muéstrame el tráfico"), y tomar una captura de pantalla (el usuario elige qué compartir en el selector nativo del navegador); esos comandos ya se interceptan antes de llegar a ti. NUNCA digas que no puedes generar PDF, Word, Excel o PowerPoint: si crees que no puedes, es que el comando no se detectó correctamente; pide que lo repitan de forma más directa (por ejemplo "genérame un Word sobre...", "hazme una presentación de...", "hazme un Excel de..."). Sé honesta sobre los límites reales cuando el usuario pregunte por ellos: por diseño de seguridad de todo navegador, ninguna página web (ni esta) puede lanzar programas arbitrarios de la computadora o el celular sin que el propio sistema operativo muestre su diálogo de permiso, ni puede desbloquear el teléfono, ni controlar apps que no tengan un enlace de apertura registrado. Sí puede controlar un televisor (encender, apagar, volumen, canales, HDMI, abrir Netflix/YouTube) cuando el usuario tiene corriendo el puente de TV en su red WiFi y lo vincula con el código que muestra el televisor; esos comandos se interceptan antes de llegar a ti. Tampoco puede emparejar audífonos/bocinas por Bluetooth (el audio Bluetooth clásico lo controla el sistema operativo, no el navegador; solo se puede conectar a dispositivos Bluetooth de bajo consumo tipo relojes inteligentes, y siempre eligiendo el dispositivo en el selector nativo), ni crear o editar diseños en Canva (eso requeriría una integración real con la API de Canva y un backend con autorización OAuth, que no existe todavía en este sistema). Si el usuario pide alguna de esas cosas, esos comandos también se interceptan antes de llegar a ti y se le explica la limitación real con la alternativa que sí funciona, así que no necesitas mencionarlas tú mismo salvo que pregunte por curiosidad. Si de todos modos te llega una petición de abrir algo que sí está en la lista de arriba, NUNCA digas que no puedes hacerlo: en vez de eso responde pidiendo que lo repita de forma más directa (por ejemplo "genera una imagen de...", "enciende la cámara" o "abre teams"), porque seguramente no se entendió bien el comando. NUNCA inventes un link o URL de una imagen, PDF, video o archivo (por ejemplo cosas como "cdn.openai.com/..." o cualquier URL que no te haya dado el propio sistema): tú no generas archivos ni imágenes por tu cuenta, esos links siempre serían falsos y no funcionarían. Si el usuario pide una imagen/PDF/Word/Excel/PowerPoint/video y esta instrucción llegó hasta ti (en vez de haber sido interceptada antes), significa que no se reconoció el comando; simplemente pide que lo repita de forma más directa. ` +
+                    `IMPORTANTE sobre tus capacidades reales: el sistema que te rodea SÍ puede generar imágenes, generar y modificar PDF, generar presentaciones de PowerPoint (.pptx) sin marca de agua, generar documentos de Word (.docx) sin marca de agua, generar hojas de cálculo de Excel (.xlsx) sin marca de agua, pegar una imagen que suba el usuario dentro de un PDF, un Word o un PowerPoint descargable, leer documentos de Word (.docx), Excel (.xlsx/.xls), PDF y archivos de código fuente (Python, JavaScript, Java, C/C++, etc.) que el usuario suba (incluyendo resolver ejercicios que contengan), generar código HTML con vista previa nítida, graficar funciones matemáticas (cartesianas, polares, paramétricas, ecuaciones implícitas como círculos y elipses, y superficies 3D) en un lienzo interactivo con zoom y descarga en PNG, generar scripts/programas descargables en el lenguaje que pidan (Python, Java, C++, C#, PHP, Ruby, Go, Rust, Swift, Kotlin, SQL, Bash, PowerShell, R, MATLAB, Dart, Lua, etc.) como archivo listo para bajar, abrir páginas web, buscar y reproducir música de YouTube, crear/gestionar playlists, reconocer gestos de mano por cámara (palma abierta, puño, pulgar arriba, señalar, paz, y ahora también mover una mano para rotar/explorar la esfera central y juntar/separar dos manos para agrandar o achicar imágenes generadas), encender o apagar la cámara del dispositivo bajo pedido explícito, abrir apps como WhatsApp, Teams, Zoom, Spotify, Slack, Discord, Word, Excel o PowerPoint (usa la app instalada si el dispositivo la tiene, o su versión web si no), abrir un chat de WhatsApp con un contacto guardado, vincularse con Waze para marcar un destino y empezar a navegar ("marca mi destino a...", "navega a...", "cómo llego a...") o para mostrar el tráfico en vivo ("muéstrame el tráfico"), y tomar una captura de pantalla (el usuario elige qué compartir en el selector nativo del navegador); esos comandos ya se interceptan antes de llegar a ti. NUNCA digas que no puedes generar PDF, Word, Excel o PowerPoint: si crees que no puedes, es que el comando no se detectó correctamente; pide que lo repitan de forma más directa (por ejemplo "genérame un Word sobre...", "hazme una presentación de...", "hazme un Excel de..."). Sé honesta sobre los límites reales cuando el usuario pregunte por ellos: por diseño de seguridad de todo navegador, ninguna página web (ni esta) puede lanzar programas arbitrarios de la computadora o el celular sin que el propio sistema operativo muestre su diálogo de permiso, ni puede desbloquear el teléfono, ni controlar apps que no tengan un enlace de apertura registrado. Sí puede controlar un televisor (encender, apagar, volumen, canales, HDMI, abrir Netflix/YouTube) cuando el usuario tiene corriendo el puente de TV en su red WiFi y lo vincula con el código que muestra el televisor; esos comandos se interceptan antes de llegar a ti. Tampoco puede emparejar audífonos/bocinas por Bluetooth (el audio Bluetooth clásico lo controla el sistema operativo, no el navegador; solo se puede conectar a dispositivos Bluetooth de bajo consumo tipo relojes inteligentes, y siempre eligiendo el dispositivo en el selector nativo), ni crear o editar diseños en Canva (eso requeriría una integración real con la API de Canva y un backend con autorización OAuth, que no existe todavía en este sistema). Si el usuario pide alguna de esas cosas, esos comandos también se interceptan antes de llegar a ti y se le explica la limitación real con la alternativa que sí funciona, así que no necesitas mencionarlas tú mismo salvo que pregunte por curiosidad. Si de todos modos te llega una petición de abrir algo que sí está en la lista de arriba, NUNCA digas que no puedes hacerlo: en vez de eso responde pidiendo que lo repita de forma más directa (por ejemplo "genera una imagen de...", "enciende la cámara" o "abre teams"), porque seguramente no se entendió bien el comando. NUNCA inventes un link o URL de una imagen, PDF, video o archivo (por ejemplo cosas como "cdn.openai.com/..." o cualquier URL que no te haya dado el propio sistema): tú no generas archivos ni imágenes por tu cuenta, esos links siempre serían falsos y no funcionarían. Si el usuario pide una imagen/PDF/Word/Excel/PowerPoint/video y esta instrucción llegó hasta ti (en vez de haber sido interceptada antes), significa que no se reconoció el comando; simplemente pide que lo repita de forma más directa. ` +
                     `Hay excepciones reales que SÍ debes explicar cuando te las pidan: no puedes generar video real (requiere una clave de un servicio de pago), no puedes crear una alarma nativa del sistema operativo del teléfono (los navegadores no dan acceso a eso), no puedes desbloquear el teléfono del usuario (ninguna página web puede, es una protección de seguridad del sistema operativo), y con WhatsApp solo puedes dejar el chat o el mensaje listo: el toque final para llamar o enviar lo debe dar el propio usuario, por seguridad del navegador. En esos casos, sé honesta y clara, sin fingir que sí se puede.`
             };
 
@@ -7250,6 +8927,17 @@ while True:
                 const lote = archivosPendientes;
                 archivosPendientes = [];
                 renderizarPreviewAdjunto();
+                // Varias imágenes + pedido de PDF/Word/PowerPoint = UN solo documento, en orden.
+                const imagenesLote = lote.filter(it => it.tipo === 'imagen').map(it => it.file);
+                if (imagenesLote.length) ultimoLoteImagenes = imagenesLote;
+                const formatoMulti = imagenesLote.length >= 2 ? detectarFormatoDocParaImagenes(texto, false) : null;
+                if (formatoMulti) {
+                    await crearDocumentoDesdeImagenes(imagenesLote, formatoMulti);
+                    for (const item of lote) {
+                        if (item.tipo !== 'imagen') await manejarArchivo(item.file, item.tipo, texto);
+                    }
+                    return;
+                }
                 for (const item of lote) {
                     await manejarArchivo(item.file, item.tipo, texto);
                 }
@@ -7283,7 +8971,10 @@ while True:
                     // Si el usuario pide meter la imagen en un PDF, un Word o
                     // un PowerPoint, se prioriza esa acción sobre el análisis
                     // normal de la imagen (que es lo que pasa por defecto).
-                    if (detectarPedirPDFDeImagen(caption)) {
+                    if (detectarPedidoCuestionario(caption)) {
+                        fileStatus.innerText = "";
+                        await generarWordCuestionario(caption, file);
+                    } else if (detectarPedirPDFDeImagen(caption)) {
                         fileStatus.innerText = "";
                         await crearPDFDesdeImagenSubida(file);
                     } else if (detectarPedirWordDeImagen(caption)) {
@@ -7332,7 +9023,8 @@ while True:
                 `${INSTRUCCION_ANTI_LATEX} ${INSTRUCCION_FORMATO_CLARO} ` +
                 "Si el usuario pide resolver solo uno de varios ejercicios de la imagen (por ejemplo 'resuelve el 2'), " +
                 "resuelve ÚNICAMENTE ese, con el mismo nivel de detalle. " +
-                "Si la imagen no es un ejercicio, describe con precisión lo que ves. Responde siempre en español.";
+                "Si la imagen no es un ejercicio, describe con precisión lo que ves. Responde siempre en español. " +
+                "NUNCA digas que no puedes generar o adjuntar archivos de Word, PDF, Excel o PowerPoint: el sistema que te rodea SÍ los crea; si el usuario lo pide y llegó hasta ti, dile que repita la orden de forma directa (por ejemplo 'dame un Word con 10 preguntas sobre [tema]').";
 
             const pregunta = caption && caption.trim()
                 ? caption.trim()
@@ -7737,5 +9429,221 @@ while True:
             if (!reducir) requestAnimationFrame(cuadro);
         })();
     </script>
+
+<!-- ==============================================================================
+     ██  INICIO · MÓDULO CINE ONEIACOOL (todo lo de cine está entre este cartel y el cartel FIN)  ██
+     Fuente: Cuevana 3 (Integración directa).
+     Incluye: estilos (CSS) + cuadro del reproductor (HTML) + lógica de voz (JavaScript)
+     ============================================================================== -->
+<!-- ===== CINE · 1/3 ESTILOS (CSS) ===== -->
+<style>
+    #cinePanel{display:none;margin:16px auto 0;width:min(900px,94vw);max-width:94vw;text-align:center;color:var(--text-color,#cfe8ff)}
+    #cinePanel.on{display:block}
+    #cineTitulo{font-size:.8rem;margin-bottom:8px}
+    #cineMarco{position:relative;width:100%;aspect-ratio:16/9;border:1px solid var(--secondary-glow,#0066ff);border-radius:8px;overflow:hidden;background:#000;box-shadow:0 0 15px rgba(0,102,255,.4)}
+    #cineMarco iframe,#cineMarco video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
+    #cineMsg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;font-size:.85rem;color:var(--secondary-glow,#7fd0ff)}
+    #cineAcc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+    #cineAcc button,#cineLista button{background:rgba(0,243,255,.06);border:1px solid var(--secondary-glow,#0066ff);color:var(--text-color,#cfe8ff);padding:6px 12px;border-radius:20px;cursor:pointer;font-size:.78rem;font-family:inherit}
+    #cineAcc button:hover,#cineLista button:hover{border-color:var(--primary-glow,#00f3ff);box-shadow:0 0 8px var(--primary-glow,#00f3ff)}
+    #cineLista{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}
+    #cineLista button.act{border-color:var(--primary-glow,#00f3ff)}
+    #cineForm{display:flex;gap:8px;margin-top:10px}
+    #cineInput{flex:1;background:rgba(0,20,40,.7);color:inherit;border:1px solid var(--secondary-glow,#0066ff);border-radius:8px;padding:8px 10px;font-family:inherit}
+    #cineForm button{background:#00f3ff;color:#001018;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:bold}
+    /* Modo "en grande": cubre toda la ventana sin necesitar gesto del usuario */
+    #cinePanel.grande{position:fixed;inset:0;z-index:99998;width:100vw;max-width:100vw;margin:0;padding:10px;box-sizing:border-box;background:#000;display:flex;flex-direction:column}
+    #cinePanel.grande #cineMarco{flex:1;aspect-ratio:auto;border-radius:0}
+    #cinePanel.grande #cineForm,#cinePanel.grande #cineLista,#cinePanel.grande #cineFiltros{display:none}
+</style>
+
+<!-- ===== CINE · 2/3 CUADRO DEL REPRODUCTOR (HTML) ===== -->
+<div id="cinePanel" aria-label="Cine ONEIACOOL">
+    <div id="cineTitulo">🎬 Cine ONEIACOOL - Cuevana 3</div>
+    <div id="cineMarco">
+        <iframe id="cuevanaFrame" src="https://cuevanahd.one/" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>
+    </div>
+    <div id="cineAcc">
+        <button id="cineGrande" type="button">⛶ Pantalla grande</button>
+        <button id="cineAlt" type="button" style="display:none">🔁 Recargar</button>
+        <button id="cineCerrar" type="button">✖ Cerrar</button>
+    </div>
+    <div id="cineFiltros" style="margin-top:8px;font-size:.78rem;display:none">
+        <label><input type="checkbox" id="fEs"> Solo español 🇪🇸</label> &nbsp;
+        <label><input type="checkbox" id="fHd"> Solo Full HD</label>
+    </div>
+    <div id="cineLista"></div>
+    <form id="cineForm" style="display:none">
+        <input id="cineInput" type="text" placeholder="Título..." autocomplete="off">
+        <button type="submit">Buscar</button>
+    </form>
+</div>
+
+<!-- ===== CINE · 3/3 LÓGICA: Cuevana 3, voz e interfaz (JavaScript) ===== -->
+<script>
+// ===================== CINE · INICIO DEL JAVASCRIPT =====================
+(function () {
+    'use strict';
+    const $ = (id) => document.getElementById(id);
+    const panel = $('cinePanel'), marco = $('cineMarco'), tituloEl = $('cineTitulo');
+
+    // Ubicar el cuadro justo debajo de la vista previa/medios existente
+    const mr = $('mediaResult');
+    if (mr && mr.parentNode) mr.insertAdjacentElement('afterend', panel);
+
+    function decir(t) { try { if (typeof agregarMensajeChat === 'function') agregarMensajeChat('assistant', t); } catch (e) {} }
+    async function hablarSeguro(t) { try { if (typeof hablar === 'function') await hablar(t); } catch (e) {} }
+    function estado(t, err) { try { if (typeof setStatus === 'function') setStatus(t, !!err); } catch (e) {} }
+    function volverEspera() {
+        try { if (typeof estadoEscucha !== 'undefined') estadoEscucha = 'DORMIDO'; } catch (e) {}
+        try { if (typeof PALABRA_ACTIVACION_TEXTO !== 'undefined') estado('En espera. Di "' + PALABRA_ACTIVACION_TEXTO + '" para activarme.'); } catch (e) {}
+    }
+
+    function mostrar() { panel.classList.add('on'); }
+    function ponerGrande(si) {
+        panel.classList.toggle('grande', si);
+        $('cineGrande').textContent = si ? '⤡ Pantalla normal' : '⛶ Pantalla grande';
+        if (si) { try { const p = panel.requestFullscreen && panel.requestFullscreen(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+        else if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+        return true;
+    }
+    function cerrar() {
+        ponerGrande(false); panel.classList.remove('on');
+        const iframe = $('cuevanaFrame'); if (iframe) iframe.src = "https://cuevanahd.one/";
+    }
+
+    function abrirCuevanaDirecto(queryBusqueda = '') {
+        mostrar();
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const iframe = $('cuevanaFrame');
+        if (iframe) {
+            if (queryBusqueda) {
+                iframe.src = 'https://cuevanahd.one/search?q=' + encodeURIComponent(queryBusqueda);
+                tituloEl.textContent = '🎬 Cuevana 3 - Buscando: ' + queryBusqueda;
+                estado('Buscando en Cuevana: ' + queryBusqueda);
+            } else {
+                iframe.src = 'https://cuevanahd.one/';
+                tituloEl.textContent = '🎬 Cine ONEIACOOL - Cuevana 3';
+                estado('Cine Cuevana 3 abierto.');
+            }
+        }
+    }
+
+    // --- Comandos de voz / texto ---
+    const RE_PELI = /(?:^|\s)(?:pon(?:me|er|gan)?|reproduce|reproducir|quiero ver|quiero que pongas|ver|busca(?:me)?|abre|muestra(?:me)?)\s+(?:la\s+|el\s+|una\s+|esa\s+)?(?:pelicula|film|filme)?\s*(?:de\s+|llamada\s+|que se llama\s+)?(.+)$/;
+    const RE_CERRAR = /(?:cierra|cerrar|quita|quitar|apaga|apagar|detener|deten|para)\s+(?:la\s+|el\s+)?(?:pelicula|cine|film)/;
+    const RE_PELI_REF = /(pelicula|cine|ponla|video|film)/;
+    const RE_GRANDE = /(en grande|pantalla (?:completa|grande)|agranda|maximiza|ponla grande|pon(?:la)? grande)/;
+    const RE_NORMAL = /(pantalla normal|achica|minimiza|tamano normal|sal(?:ir)? de pantalla completa|quita(?:r)? (?:lo )?grande)/;
+    const RE_ABRIR_CINE = /(?:pon|abre|muestra|quiero ver)\s+(?:cine|cuevana|peliculas)/;
+
+    // Si piden música/canción/cantante (y no mencionan película), NO es cine:
+    // se deja pasar al flujo normal para que lo maneje el reproductor de música.
+    function esPedidoMusica(t) {
+        const s = t.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (/\b(pelicula|peliculas|film|filme|cine|cuevana)\b/.test(s)) return false;
+        return /\b(musica|cancion|canciones|tema|temas|rola|rolas|cantante|artista|playlist|album)\b/.test(s);
+    }
+
+    // Limpia el título que dejó el micrófono: quita puntuación al final, repite-
+    // "pelicula" al inicio y corrige "new day" cuando el micro lo oye "y day".
+    function limpiarTitulo(t) {
+        let s = String(t || '').trim();
+        s = s.replace(/[.,;:!?\s]+$/, '');
+        s = s.replace(/^(?:pelicula|peliculas|film|filme)\s+(?:de\s+)?/, '');
+        s = s.replace(/\b(?:y|ni|nu|niu)\s+day\b/g, 'new day');
+        return s.trim();
+    }
+
+    function interpretar(cmd) {
+        const t = (cmd || '').toLowerCase().replace(/^(oye|hey|ey)\s+(oneiacool\s+)?/, '');
+        if (RE_PELI_REF.test(t) && RE_NORMAL.test(t)) return { normal: true };
+        if (RE_PELI_REF.test(t) && RE_GRANDE.test(t)) return { grande: true };
+        if (RE_CERRAR.test(t)) return { cerrar: true };
+
+        const m = esPedidoMusica(t) ? null : t.match(RE_PELI);
+        if (m && m[1]) {
+            let titulo = limpiarTitulo(limpiarTitulo(m[1]).replace(/\s+(por favor|gracias|en grande|en cuevana)$/, ''));
+            if (titulo && !['cine', 'cuevana', 'pelicula', 'peliculas'].includes(titulo)) {
+                return { titulo, grande: /\ben grande\b/.test(t) };
+            }
+        }
+
+        if (RE_ABRIR_CINE.test(t) || /(?:cuevana)/.test(t)) return { abrir: true };
+        return null;
+    }
+
+    function enganchar() {
+        const original = window.gestionarRespuesta;
+        if (typeof original !== 'function') return false;
+        if (original.__cine) return true;
+        const envoltura = async function (comando) {
+            let r = null;
+            try { r = interpretar(String(comando || '')); } catch (e) {}
+            if (!r) return original.apply(this, arguments);
+            try { if (typeof agregarMensajeChat === 'function') agregarMensajeChat('user', comando); } catch (e) {}
+            
+            if (r.cerrar) { 
+                cerrar(); 
+                decir('Cine cerrado.'); 
+                await hablarSeguro('Listo, cerré el cine.'); 
+            }
+            else if (r.normal) { 
+                ponerGrande(false); 
+                await hablarSeguro('Listo, tamaño normal.'); 
+            }
+            else if (r.grande && !r.titulo) {
+                ponerGrande(true); 
+                decir('🎬 Cine en pantalla grande.'); 
+                await hablarSeguro('Listo, lo puse en grande.'); 
+            }
+            else if (r.titulo) {
+                abrirCuevanaDirecto(r.titulo);
+                decir('🎬 Buscando ' + r.titulo + ' en Cuevana 3.');
+                await hablarSeguro('Buscando ' + r.titulo);
+                if (r.grande) ponerGrande(true);
+            }
+            else if (r.abrir) {
+                abrirCuevanaDirecto(); 
+                decir('🎬 Abriendo Cuevana 3.'); 
+                await hablarSeguro('Abriendo Cuevana 3.');
+            }
+            volverEspera();
+        };
+        envoltura.__cine = true;
+        window.gestionarRespuesta = envoltura;
+        try { gestionarRespuesta = envoltura; } catch (e) {}
+        return true;
+    }
+    if (!enganchar()) window.addEventListener('load', enganchar);
+
+    // --- Botón "🎬 Cine" en el menú flotante ---
+    function botonMenu() {
+        const menu = $('attachMenu'); if (!menu || $('cineBtnMenu')) return;
+        const b = document.createElement('button');
+        b.id = 'cineBtnMenu'; b.className = 'attach-btn'; b.type = 'button'; b.textContent = '🎬 Cine';
+        b.onclick = () => {
+            menu.classList.remove('open'); const p = $('plusBtn'); if (p) p.classList.remove('open');
+            abrirCuevanaDirecto();
+        };
+        const tv = Array.from(menu.querySelectorAll('button')).find((x) => /\bTV\b/.test(x.textContent));
+        if (tv) tv.insertAdjacentElement('afterend', b); else menu.appendChild(b);
+    }
+    botonMenu();
+
+    $('cineCerrar').onclick = cerrar;
+    $('cineGrande').onclick = () => ponerGrande(!panel.classList.contains('grande'));
+    $('cineForm').onsubmit = (e) => {
+        e.preventDefault();
+        const val = $('cineInput').value.trim();
+        if (val) abrirCuevanaDirecto(val);
+    };
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && panel.classList.contains('grande')) ponerGrande(false); });
+})();
+// ===================== CINE · FIN DEL JAVASCRIPT =====================
+</script>
+<!-- ==============================================================================
+     ██  FIN · MÓDULO CINE ONEIACOOL  ██
+     ============================================================================== -->
 </body>
 </html>
